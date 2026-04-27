@@ -1,4 +1,4 @@
-  """
+"""
 VN Stock AI — Multi-Agent Financial Analysis
 Python 3.11 | Flask | Groq DeepSeek-R1 | Gemini | DuckDuckGo
 """
