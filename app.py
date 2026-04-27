@@ -1,5 +1,6 @@
 """
-VN Stock AI - Phiên bản sạch, đẹp, hoạt động tốt (app.py ở root)
+VN Stock AI - Phiên bản đúng biến môi trường GROQ_API_KEY_STOCK & GEMINI_API_KEY_STOCK
+File app.py đặt ở root
 """
 
 import os
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 TEMP_DIR = Path(tempfile.gettempdir()) / "vnstock_ai"
 TEMP_DIR.mkdir(exist_ok=True)
 
-# ====================== HTML ĐẸP (giống ảnh bạn gửi) ======================
+# ====================== HTML GIAO DIỆN (giống ảnh bạn gửi) ======================
 INDEX_HTML = """<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -30,7 +31,7 @@ INDEX_HTML = """<!DOCTYPE html>
     <title>VNStockAI - Phân Tích Chứng Khoán AI</title>
     <style>
         :root { --bg: #0f172a; --card: #1e2937; --accent: #22d3ee; }
-        body { margin:0; font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: #e2e8f0; line-height: 1.5; }
+        body { margin:0; font-family: system-ui, sans-serif; background: var(--bg); color: #e2e8f0; }
         .ticker { background: #1e2937; padding: 12px 0; overflow: hidden; white-space: nowrap; border-bottom: 3px solid #334155; font-size: 15px; }
         .ticker-content { display: inline-block; animation: ticker 45s linear infinite; }
         @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
@@ -94,18 +95,18 @@ INDEX_HTML = """<!DOCTYPE html>
         <div class="card">
             <h4>📄 Upload Báo Cáo Tài Chính (PDF)</h4>
             <input type="file" id="pdfFiles" multiple accept=".pdf" onchange="handleFiles(this.files)">
-            <small style="color:#94a3b8;">Tối đa 5 files • Kéo thả cũng được</small>
+            <small style="color:#94a3b8;">Tối đa 5 files</small>
         </div>
 
         <button onclick="analyzeNow()" class="btn-run">🤖 Phân Tích AI Chuyên Sâu</button>
     </div>
 
-    <!-- Main Area -->
+    <!-- Main -->
     <div class="main">
         <div style="text-align:center; margin-bottom:40px;">
             <h1>VNStockAI</h1>
             <p style="font-size:1.2em; color:#a5b4fc;">Phân Tích Chứng Khoán AI</p>
-            <p>Hệ thống multi-agent chuyên sâu cho thị trường Việt Nam</p>
+            <p>Hệ thống multi-agent cho thị trường Việt Nam</p>
         </div>
 
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-bottom:30px;">
@@ -115,7 +116,7 @@ INDEX_HTML = """<!DOCTYPE html>
             </div>
             <div class="card" style="text-align:center;">
                 <h3>📄 Đọc Báo Cáo PDF</h3>
-                <p>Gemini 1.5/2.0 Flash</p>
+                <p>Gemini Flash</p>
             </div>
             <div class="card" style="text-align:center;">
                 <h3>🧠 Suy Luận Định Giá</h3>
@@ -123,9 +124,9 @@ INDEX_HTML = """<!DOCTYPE html>
             </div>
         </div>
 
-        <div id="result" class="card" style="min-height: 500px; font-size: 15.5px;">
-            <p style="text-align:center; color:#94a3b8; padding:40px;">
-                Nhập mã chứng khoán (VCB, HPG, FPT...) và nhấn <strong>Run Phân Tích</strong>
+        <div id="result" class="card" style="min-height: 500px;">
+            <p style="text-align:center; color:#94a3b8; padding:60px;">
+                Nhập mã và nhấn Run để bắt đầu phân tích
             </p>
         </div>
     </div>
@@ -134,33 +135,30 @@ INDEX_HTML = """<!DOCTYPE html>
 <script>
 function setType(t) {
     const input = document.getElementById('symbol');
-    input.placeholder = t === 'forex' ? 'USD.VND, EUR.USD...' : 'VCB, HPG, FPT...';
+    input.placeholder = t === 'forex' ? 'USD.VND...' : 'VCB, HPG...';
 }
 
 function analyzeNow() {
     const symbol = document.getElementById('symbol').value.trim().toUpperCase();
-    if (!symbol) return alert("Vui lòng nhập mã chứng khoán!");
+    if (!symbol) return alert("Vui lòng nhập mã!");
 
     const resultDiv = document.getElementById('result');
-    resultDiv.innerHTML = `<p style="text-align:center; padding:60px;">Đang phân tích <strong>${symbol}</strong> bằng Multi-Agent AI...<br><small>(có thể mất 15-40 giây)</small></p>`;
+    resultDiv.innerHTML = `<p style="text-align:center; padding:60px;">Đang phân tích <strong>${symbol}</strong>...<br><small>Multi-Agent AI đang chạy (15-40 giây)</small></p>`;
 
     const formData = new FormData();
     formData.append('symbol', symbol);
     formData.append('type', 'stock');
 
-    fetch('/api/analyze', {
-        method: 'POST',
-        body: formData
-    })
+    fetch('/api/analyze', { method: 'POST', body: formData })
     .then(r => r.json())
     .then(data => {
         resultDiv.innerHTML = `
-            <h3>Kết quả phân tích ${symbol}</h3>
-            <pre style="white-space: pre-wrap; background:#0f172a; padding:20px; border-radius:8px; overflow:auto; max-height:70vh;">${data.analysis || JSON.stringify(data, null, 2)}</pre>
+            <h3>Kết quả: ${symbol}</h3>
+            <pre style="white-space:pre-wrap; background:#0f172a; padding:20px; border-radius:8px; max-height:70vh; overflow:auto;">${data.analysis || JSON.stringify(data, null, 2)}</pre>
         `;
     })
     .catch(err => {
-        resultDiv.innerHTML = `<p style="color:#f87171; padding:40px;">Lỗi kết nối: ${err.message}</p>`;
+        resultDiv.innerHTML = `<p style="color:#f87171; padding:40px;">Lỗi: ${err.message}</p>`;
     });
 }
 
@@ -173,21 +171,15 @@ function addUrlInput() {
 }
 
 function handleFiles(files) {
-    if (files.length > 5) {
-        alert("Chỉ hỗ trợ tối đa 5 file PDF!");
-    } else {
-        console.log(`Đã chọn ${files.length} file PDF`);
-    }
+    if (files.length > 5) alert("Chỉ hỗ trợ tối đa 5 file PDF!");
+    else console.log(`Đã chọn ${files.length} file`);
 }
-
-// Khởi tạo
-console.log("%cVNStockAI loaded successfully", "color:#22d3ee; font-weight:bold");
 </script>
 </body>
 </html>
 """
 
-# ====================== AGENTS (đã fix Groq + đơn giản hóa) ======================
+# ====================== AGENTS - SỬ DỤNG ĐÚNG BIẾN MÔI TRƯỜNG ======================
 class NewsAgent:
     def __init__(self):
         self.available = True
@@ -196,42 +188,43 @@ class NewsAgent:
         try:
             from duckduckgo_search import DDGS
             with DDGS() as d:
-                return list(d.text(f"{symbol} cổ phiếu tin tức mới nhất 2026", max_results=8))
+                return list(d.text(f"{symbol} cổ phiếu 2026", max_results=8))
         except:
             return []
 
 class ReasoningAgent:
     def __init__(self):
-        key = os.getenv("GROQ_API_KEY") or os.getenv("GROQ_API_KEY_STOCK")
+        # DÙNG ĐÚNG BIẾN MÔI TRƯỜNG CỦA BẠN
+        key = os.getenv("GROQ_API_KEY_STOCK")
         self.available = bool(key)
         self.client = None
         if self.available:
             try:
                 from groq import Groq
                 self.client = Groq(api_key=key)
-                logger.info("✅ Groq connected successfully")
+                logger.info("✅ Groq initialized with GROQ_API_KEY_STOCK")
             except Exception as e:
-                logger.error(f"Groq init failed: {e}")
+                logger.error(f"Groq init error: {e}")
                 self.available = False
 
     def analyze(self, symbol):
         if not self.client:
-            return "Chưa cấu hình GROQ_API_KEY. Vui lòng thêm key vào Render Environment Variables."
+            return "❌ Chưa cấu hình GROQ_API_KEY_STOCK trên Render.com"
 
-        system = "Bạn là chuyên gia phân tích chứng khoán Việt Nam giàu kinh nghiệm. Trả lời bằng tiếng Việt, rõ ràng, có khuyến nghị cụ thể (MUA/BÁN/GIỮ)."
-        user = f"Phân tích chi tiết cổ phiếu {symbol} hiện tại (2026): tình hình kinh doanh, định giá, xu hướng kỹ thuật, và khuyến nghị đầu tư."
+        system = "Bạn là chuyên gia phân tích chứng khoán Việt Nam. Trả lời bằng tiếng Việt, chuyên nghiệp, có khuyến nghị rõ ràng."
+        user = f"Phân tích chi tiết cổ phiếu {symbol} năm 2026: tình hình tài chính, xu hướng, định giá, rủi ro và khuyến nghị MUA/BÁN/GIỮ."
 
         try:
             r = self.client.chat.completions.create(
                 model="deepseek-r1-distill-llama-70b",
                 messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
                 temperature=0.3,
-                max_tokens=6000,
+                max_tokens=5500,
             )
             return r.choices[0].message.content
         except Exception as e:
-            logger.error(f"Groq call error: {e}")
-            return f"Lỗi khi gọi Groq: {str(e)}"
+            logger.error(f"Groq API error: {e}")
+            return f"Lỗi Groq: {str(e)}"
 
 class Orchestrator:
     def __init__(self):
@@ -240,11 +233,7 @@ class Orchestrator:
 
     def analyze(self, symbol):
         analysis = self.ai.analyze(symbol)
-        return {
-            "symbol": symbol,
-            "analysis": analysis,
-            "status": "success"
-        }
+        return {"symbol": symbol, "analysis": analysis}
 
 orc = Orchestrator()
 
@@ -258,20 +247,21 @@ def analyze():
     try:
         symbol = request.form.get("symbol", "").strip().upper()
         if not symbol:
-            return jsonify({"error": "Vui lòng nhập mã"}), 400
+            return jsonify({"error": "Vui lòng nhập mã chứng khoán"}), 400
         
         result = orc.analyze(symbol)
         return jsonify(result)
     except Exception as e:
         logger.error(f"Analyze error: {e}")
-        return jsonify({"error": "Lỗi server nội bộ"}), 500
+        return jsonify({"error": "Lỗi server"}), 500
 
 @app.route("/health")
 def health():
     return jsonify({
         "status": "ok",
-        "groq": orc.ai.available
+        "groq": orc.ai.available,
+        "gemini": bool(os.getenv("GEMINI_API_KEY_STOCK"))
     })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5000)
