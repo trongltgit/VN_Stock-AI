@@ -1,5 +1,7 @@
 """
-VN Stock AI - Sửa lỗi toUpperCase + Model Groq + Tương thích với templates/index.html
+VN Stock AI - Fixed version
+- Wrap response in {mode, data} to match frontend (json.data.recommendation)
+- Accept but ignore urls/pdfs from frontend FormData
 """
 
 import os
@@ -30,7 +32,6 @@ class NewsAgent:
             return []
 
 class ReasoningAgent:
-    # MODELS mới - thay thế model cũ bị decommissioned
     MODELS = ["llama-3.3-70b-versatile", "llama3-70b-8192"]
 
     def __init__(self):
@@ -48,7 +49,7 @@ class ReasoningAgent:
 
     def analyze(self, symbol, stock_type="stock"):
         if not self.client:
-            return "❌ Chưa cấu hình GROQ_API_KEY_STOCK trên Render.com"
+            return {"analysis": "❌ Chưa cấu hình GROQ_API_KEY_STOCK trên Render.com", "recommendation": "WATCH"}
 
         system = """Bạn là chuyên gia phân tích chứng khoán Việt Nam. 
 Trả lời bằng tiếng Việt, chuyên nghiệp, có cấu trúc rõ ràng.
@@ -71,16 +72,12 @@ Luôn đưa ra khuyến nghị: **[MUA / BÁN / GIỮ]** + giá mục tiêu + lu
                 )
                 analysis = r.choices[0].message.content
 
-                # Trích xuất recommendation đơn giản để frontend không lỗi
                 rec = "HOLD"
                 upper = analysis.upper()
                 if any(x in upper for x in ["MUA", "BUY"]): rec = "BUY"
                 elif any(x in upper for x in ["BÁN", "SELL"]): rec = "SELL"
 
-                return {
-                    "analysis": analysis,
-                    "recommendation": rec
-                }
+                return {"analysis": analysis, "recommendation": rec}
             except Exception as e:
                 logger.warning(f"Model {model} failed: {e}")
                 continue
@@ -94,13 +91,17 @@ class Orchestrator:
 
     def analyze(self, symbol, stock_type="stock"):
         result = self.ai.analyze(symbol, stock_type)
+        # ✅ FIX: Wrap in {mode, data} to match frontend (const data = json.data)
         return {
-            "symbol": symbol,
-            "type": stock_type,
-            "analysis": result["analysis"],
-            "recommendation": result["recommendation"],
-            "news_count": 0,
-            "has_documents": False
+            "mode": stock_type,
+            "data": {
+                "symbol": symbol,
+                "type": stock_type,
+                "analysis": result["analysis"],
+                "recommendation": result["recommendation"],
+                "news_count": 0,
+                "has_documents": False
+            }
         }
 
 orc = Orchestrator()
@@ -115,18 +116,20 @@ def analyze():
     try:
         symbol = request.form.get("symbol", "").strip()
         stock_type = request.form.get("type", "stock")
+        # ✅ FIX: Frontend also sends urls/pdfs — accept but ignore for now
+        urls = request.form.get("urls", "[]")
+        logger.info(f"Analyze: symbol={symbol}, type={stock_type}")
 
         if not symbol:
             return jsonify({"error": "Vui lòng nhập mã chứng khoán"}), 400
 
         symbol = symbol.upper()
-
         result = orc.analyze(symbol, stock_type)
         return jsonify(result)
 
     except Exception as e:
-        logger.error(f"Analyze error: {e}")
-        return jsonify({"error": "Lỗi server khi phân tích"}), 500
+        logger.error(f"Analyze error: {e}", exc_info=True)
+        return jsonify({"error": f"Lỗi server: {str(e)}"}), 500
 
 @app.route("/health")
 def health():
