@@ -1,0 +1,16 @@
+flask==3.0.3
+flask-cors==4.0.1
+requests==2.32.3
+groq==0.9.0
+google-generativeai==0.7.2
+PyPDF2==3.0.1
+pdfplumber==0.11.3
+python-dotenv==1.0.1
+duckduckgo-search==6.2.13
+gunicorn==22.0.0
+yfinance==0.2.41
+pandas==2.2.2
+numpy==1.26.4
+beautifulsoup4==4.12.3
+lxml==5.2.2
+Pillow==10.4.0
