@@ -76,7 +76,7 @@ class NewsAgent:
 # ─────────────────────────────────────────────
 class DocumentAgent:
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY", "")
+        api_key = os.getenv("GEMINI_API_KEY_STOCK", "")
         self.available = bool(api_key)
         if self.available:
             try:
@@ -148,7 +148,7 @@ Trả lời bằng tiếng Việt, chuyên nghiệp, súc tích."""
 # ─────────────────────────────────────────────
 class ReasoningAgent:
     def __init__(self):
-        api_key = os.getenv("GROQ_API_KEY", "")
+        api_key = os.getenv("GROQ_API_KEY_STOCK", "")
         self.available = bool(api_key)
         self.client = None
         if self.available:
