@@ -1,184 +1,106 @@
-# VN Stock AI Analyzer 🇻🇳📈
+# 🚀 VN Stock AI — Hướng Dẫn Deploy (100% Miễn Phí)
 
-Hệ thống phân tích chứng khoán Việt Nam bằng AI — cổ phiếu, chứng chỉ quỹ, ETF — với phân tích cơ bản, kỹ thuật, đồ thị, giá và khuyến nghị MUA/BÁN/GIỮ.
+## Kiến Trúc Hệ Thống
 
-## Tính năng
+```
+┌─────────────────────────────────────────────────────┐
+│                   MULTI-AGENT WORKFLOW               │
+├──────────────┬──────────────────┬───────────────────┤
+│  AGENT 1     │    AGENT 2       │    AGENT 3        │
+│  DuckDuckGo  │  Gemini 1.5Flash │  DeepSeek-R1      │
+│  (News)      │  (Docs/PDF)      │  via Groq API     │
+│  FREE        │  FREE (15 RPM)   │  FREE             │
+└──────────────┴──────────────────┴───────────────────┘
+```
 
-- **Phân tích mã** — nhập bất kỳ mã cổ phiếu (VCB, TCB, HPG...) hoặc chứng chỉ quỹ (VCBS, MGF, VCBF-BCF...)
-- **Phân tích toàn diện** — cơ bản, kỹ thuật, đồ thị, giá, thị trường
-- **Khuyến nghị AI** — MUA / BÁN / GIỮ kèm mục tiêu giá, cắt lỗ, độ tin cậy
-- **Tổng quan thị trường** — VN-Index, HNX, UPCOM, ngành nóng, chiến lược
-- **So sánh mã** — phân tích song song tối đa 4 mã
-- **Quản lý nguồn dữ liệu** — thêm/tắt website tham chiếu (VCBS, VCBF, CafeF, VietStock...)
-- **Lịch sử phân tích** — xem lại các kết quả trong phiên
-
----
-
-## Cấu trúc dự án
+## 📁 Cấu Trúc Files
 
 ```
 vn-stock-ai/
-├── server.js           # Express server + Anthropic API proxy
-├── package.json
-├── .env.example        # Template biến môi trường
-├── .gitignore
-├── README.md
-└── public/
-    ├── index.html      # Giao diện chính
-    ├── style.css       # CSS
-    └── app.js          # Frontend logic
+├── backend/
+│   ├── app.py              ← Flask server + 3 AI agents
+│   ├── requirements.txt    ← Python dependencies
+│   └── .env.example        ← Template cấu hình API keys
+├── frontend/
+│   └── templates/
+│       └── index.html      ← Giao diện web (served by Flask)
+├── render.yaml             ← Config deploy Render.com
+├── Procfile                ← Config gunicorn
+└── README.md               ← File này
 ```
 
----
+## 🔑 Bước 1: Lấy API Keys (Miễn Phí)
 
-## Chạy local
+### Groq API (DeepSeek-R1 - MIỄN PHÍ)
+1. Vào https://console.groq.com
+2. Đăng ký tài khoản miễn phí
+3. Tạo API Key
+4. Model sử dụng: `deepseek-r1-distill-llama-70b` (free tier)
 
-### 1. Clone & cài dependencies
+### Google Gemini API (MIỄN PHÍ)
+1. Vào https://aistudio.google.com
+2. Đăng nhập bằng Google account
+3. Tạo API Key
+4. Model: `gemini-1.5-flash` (miễn phí 15 requests/phút)
 
+## 🌐 Bước 2: Deploy lên Render.com (MIỄN PHÍ)
+
+### Cách 1: Deploy qua GitHub (Khuyên dùng)
+1. Tạo repo GitHub mới
+2. Push toàn bộ code lên
+3. Vào https://render.com → New → Web Service
+4. Kết nối GitHub repo
+5. Cấu hình:
+   - **Build Command**: `pip install -r backend/requirements.txt`
+   - **Start Command**: `gunicorn backend.app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120`
+6. Thêm Environment Variables:
+   - `GROQ_API_KEY` = key của bạn
+   - `GEMINI_API_KEY` = key của bạn
+7. Chọn **Free plan** → Deploy!
+
+### Cách 2: Deploy Local (Test)
 ```bash
-git clone https://github.com/YOUR_USERNAME/vn-stock-ai.git
 cd vn-stock-ai
-npm install
+pip install -r backend/requirements.txt
+cp backend/.env.example backend/.env
+# Sửa .env với API keys thực của bạn
+cd backend
+python app.py
+# Mở http://localhost:5000
 ```
 
-### 2. Tạo file `.env`
+## 🖥️ Giao Diện Web
 
-```bash
-cp .env.example .env
-```
+- **Tab Cổ Phiếu**: Nhập mã như VCB, HPG, FPT...
+- **Tab Chứng Chỉ Quỹ**: Nhập mã như MAFPF1, VFMVSF...
+- **Tab Ngoại Tệ**: Nhập cặp như USD.VND, EUR.USD, USD.JPY...
+- **URL Sources**: Paste URL từ VCBS, VCBF để lấy thêm dữ liệu
+- **Upload PDF**: Upload BCTC, prospectus để phân tích sâu hơn
 
-Mở `.env` và điền API key:
+## ⚡ Tính Năng
 
-```
-ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-PORT=3000
-```
+✅ Phân tích cơ bản (tài chính, định giá, rủi ro)
+✅ Phân tích kỹ thuật (xu hướng, hỗ trợ/kháng cự, RSI, MACD)
+✅ Đọc và phân tích báo cáo tài chính PDF
+✅ Quét tin tức thị trường real-time
+✅ Phân tích tỷ giá ngoại tệ
+✅ Khuyến nghị MUA/BÁN/GIỮ có luận cứ
+✅ Giao diện professional dark theme
+✅ Ticker tape giá realtime
+✅ Hoàn toàn miễn phí!
 
-> **Lấy API key tại:** https://console.anthropic.com/settings/keys
+## 🔧 Models AI Sử Dụng (Tất Cả Miễn Phí)
 
-### 3. Chạy server
+| Agent | Model | Provider | Giới hạn Free |
+|-------|-------|----------|---------------|
+| News | DuckDuckGo | N/A | Unlimited |
+| Document | gemini-1.5-flash | Google AI Studio | 15 RPM, 1M TPM |
+| Reasoning | deepseek-r1-distill-llama-70b | Groq | 30 RPM, 14400 RPD |
+| Fallback | llama-3.3-70b-versatile | Groq | 30 RPM |
 
-```bash
-npm start
-# hoặc development mode (auto-reload):
-npm run dev
-```
+## ⚠️ Lưu Ý
 
-Mở trình duyệt: **http://localhost:3000**
-
----
-
-## Deploy lên Render (free)
-
-### Bước 1 — Push lên GitHub
-
-```bash
-git init
-git add .
-git commit -m "first commit"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/vn-stock-ai.git
-git push -u origin main
-```
-
-### Bước 2 — Tạo Web Service trên Render
-
-1. Đăng nhập https://render.com
-2. Click **"New +"** → **"Web Service"**
-3. Kết nối GitHub repo `vn-stock-ai`
-4. Điền thông tin:
-
-| Trường | Giá trị |
-|--------|---------|
-| **Name** | `vn-stock-ai` (hoặc tên bạn muốn) |
-| **Region** | Singapore (gần VN nhất) |
-| **Branch** | `main` |
-| **Runtime** | `Node` |
-| **Build Command** | `npm install` |
-| **Start Command** | `npm start` |
-| **Plan** | `Free` |
-
-### Bước 3 — Thêm biến môi trường
-
-Trong Render dashboard → tab **Environment** → Add:
-
-```
-ANTHROPIC_API_KEY = sk-ant-xxxxxxxxxxxx
-```
-
-### Bước 4 — Deploy
-
-Click **"Create Web Service"**. Render sẽ tự động build & deploy.  
-URL sẽ có dạng: `https://vn-stock-ai.onrender.com`
-
-> ⚠️ **Lưu ý Free tier:** Render free sẽ sleep sau 15 phút không có request.  
-> Lần đầu vào sau khi sleep sẽ mất ~30-60 giây để wake up.
-
----
-
-## Cập nhật sau khi deploy
-
-Mỗi lần push code mới lên GitHub, Render sẽ tự động re-deploy:
-
-```bash
-git add .
-git commit -m "cập nhật tính năng X"
-git push
-```
-
----
-
-## API Endpoints
-
-| Method | Path | Mô tả |
-|--------|------|-------|
-| `POST` | `/api/analyze` | Phân tích một mã chứng khoán |
-| `POST` | `/api/market` | Phân tích tổng quan thị trường |
-| `GET`  | `/api/health` | Kiểm tra trạng thái server |
-
-### POST /api/analyze
-
-```json
-{
-  "ticker": "VCB",
-  "assetType": "stock",
-  "analysisTypes": ["Phân tích cơ bản", "Phân tích kỹ thuật"],
-  "sources": ["VCBS Quotes", "CafeF", "VietStock"]
-}
-```
-
----
-
-## Tùy chỉnh thêm
-
-### Thêm nguồn dữ liệu trong code (`public/app.js`)
-
-```javascript
-state.sources.push({
-  name: 'Tên nguồn',
-  url: 'https://example.com',
-  type: 'data', // data | news | broker | fund | research | custom
-  active: true
-});
-```
-
-### Thay đổi model AI (`server.js`)
-
-Tìm dòng:
-```javascript
-model: "claude-sonnet-4-20250514",
-```
-Thay bằng model khác nếu cần.
-
----
-
-## Lưu ý pháp lý
-
-> Kết quả phân tích từ AI **chỉ mang tính tham khảo**, không phải tư vấn đầu tư chính thức.  
-> Nhà đầu tư tự chịu trách nhiệm về các quyết định đầu tư của mình.
-
----
-
-## License
-
-MIT
+- Render Free tier có thể sleep sau 15 phút không dùng
+- Lần đầu load có thể mất 30-60 giây để warm up
+- PDF tối đa 5 files, mỗi file không quá 10MB
+- Phân tích mỗi lần mất khoảng 15-30 giây
