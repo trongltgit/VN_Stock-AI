@@ -32,20 +32,19 @@ class NewsAgent:
     def __init__(self):
         try:
             from duckduckgo_search import DDGS
-            self.ddgs = DDGS()
             self.available = True
         except Exception as e:
             logger.warning(f"DuckDuckGo not available: {e}")
             self.available = False
 
-    def search_market_news(self, query: str, max_results: int = 8) -> list:
+    def search(self, query: str, max_results: int = 8) -> list:
         if not self.available:
             return []
         try:
             from duckduckgo_search import DDGS
             with DDGS() as ddgs:
                 results = list(ddgs.text(
-                    f"{query} chứng khoán tài chính Việt Nam 2024 2025",
+                    query + " 2025",
                     region="vn-vi",
                     max_results=max_results
                 ))
@@ -54,36 +53,28 @@ class NewsAgent:
             logger.error(f"DuckDuckGo search error: {e}")
             return []
 
-    def search_forex_news(self, currency_pair: str, max_results: int = 8) -> list:
-        if not self.available:
-            return []
-        try:
-            from duckduckgo_search import DDGS
-            with DDGS() as ddgs:
-                results = list(ddgs.text(
-                    f"tỷ giá {currency_pair} phân tích kỹ thuật 2025",
-                    region="vn-vi",
-                    max_results=max_results
-                ))
-            return results
-        except Exception as e:
-            logger.error(f"DuckDuckGo forex search error: {e}")
-            return []
+    def search_market_news(self, symbol: str) -> list:
+        return self.search(f"{symbol} chứng khoán tài chính Việt Nam")
+
+    def search_forex_news(self, pair: str) -> list:
+        return self.search(f"tỷ giá {pair} phân tích kỹ thuật")
 
 
 # ─────────────────────────────────────────────
 # AGENT 2: DOCUMENT READER (Gemini - Free)
+# Uses new google-genai SDK (compatible with Python 3.14)
 # ─────────────────────────────────────────────
 class DocumentAgent:
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY_STOCK", "")
+        api_key = os.getenv("GEMINI_API_KEY", "")
         self.available = bool(api_key)
+        self.client = None
         if self.available:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=api_key)
-                self.model = genai.GenerativeModel("gemini-1.5-flash")
-                logger.info("Gemini DocumentAgent initialized")
+                from google import genai
+                self.client = genai.Client(api_key=api_key)
+                self.model_id = "gemini-2.0-flash"
+                logger.info("Gemini DocumentAgent initialized (google-genai SDK)")
             except Exception as e:
                 logger.error(f"Gemini init error: {e}")
                 self.available = False
@@ -97,7 +88,7 @@ class DocumentAgent:
                     page_text = page.extract_text()
                     if page_text:
                         text += page_text + "\n"
-            return text[:50000]  # giới hạn token
+            return text[:50000]
         except Exception as e:
             logger.error(f"PDF extraction error: {e}")
             return ""
@@ -106,7 +97,6 @@ class DocumentAgent:
         if not self.available or not text:
             return {"summary": "Không có dữ liệu tài liệu", "key_metrics": {}}
         try:
-            import google.generativeai as genai
             prompt = f"""Bạn là chuyên gia phân tích tài chính. Phân tích tài liệu sau về mã {symbol}.
 Trích xuất và tóm tắt:
 1. Doanh thu, lợi nhuận, EPS, P/E, ROE, ROA, Debt/Equity
@@ -118,18 +108,19 @@ Tài liệu:
 {text[:20000]}
 
 Trả lời bằng tiếng Việt, chuyên nghiệp, súc tích."""
-            response = self.model.generate_content(prompt)
-            return {
-                "summary": response.text,
-                "key_metrics": self._extract_metrics(response.text)
-            }
+            response = self.client.models.generate_content(
+                model=self.model_id,
+                contents=prompt
+            )
+            summary = response.text
+            return {"summary": summary, "key_metrics": self._extract_metrics(summary)}
         except Exception as e:
             logger.error(f"Gemini analysis error: {e}")
-            return {"summary": f"Lỗi phân tích: {str(e)}", "key_metrics": {}}
+            return {"summary": f"Lỗi phân tích Gemini: {str(e)}", "key_metrics": {}}
 
     def _extract_metrics(self, text: str) -> dict:
-        metrics = {}
         import re
+        metrics = {}
         patterns = {
             "PE": r"P/E[:\s]*([0-9.]+)",
             "ROE": r"ROE[:\s]*([0-9.]+)%?",
@@ -148,7 +139,7 @@ Trả lời bằng tiếng Việt, chuyên nghiệp, súc tích."""
 # ─────────────────────────────────────────────
 class ReasoningAgent:
     def __init__(self):
-        api_key = os.getenv("GROQ_API_KEY_STOCK", "")
+        api_key = os.getenv("GROQ_API_KEY", "")
         self.available = bool(api_key)
         self.client = None
         if self.available:
@@ -160,25 +151,14 @@ class ReasoningAgent:
                 logger.error(f"Groq init error: {e}")
                 self.available = False
 
-    def _call_groq(self, system_prompt: str, user_prompt: str, model: str = "deepseek-r1-distill-llama-70b") -> str:
+    def _call_groq(self, system_prompt: str, user_prompt: str) -> str:
         if not self.available:
-            return "Groq API chưa được cấu hình. Vui lòng thêm GROQ_API_KEY."
-        try:
-            completion = self.client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.3,
-                max_tokens=4096,
-            )
-            return completion.choices[0].message.content
-        except Exception as e:
-            # fallback to llama
+            return "⚠ Groq API chưa được cấu hình. Vui lòng thêm GROQ_API_KEY vào Environment Variables trên Render."
+        # Try DeepSeek-R1 first, fallback to Llama
+        for model in ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile"]:
             try:
                 completion = self.client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
+                    model=model,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt}
@@ -187,20 +167,21 @@ class ReasoningAgent:
                     max_tokens=4096,
                 )
                 return completion.choices[0].message.content
-            except Exception as e2:
-                logger.error(f"Groq error: {e2}")
-                return f"Lỗi AI: {str(e2)}"
+            except Exception as e:
+                logger.warning(f"Groq model {model} failed: {e}")
+                continue
+        return "Lỗi: Không thể kết nối Groq API."
 
     def analyze_stock(self, symbol: str, news_data: list, doc_analysis: dict, stock_type: str = "stock") -> dict:
         system_prompt = """Bạn là chuyên gia phân tích chứng khoán hàng đầu Việt Nam với 20 năm kinh nghiệm.
 Nhiệm vụ: Phân tích toàn diện, chuyên sâu và đưa ra khuyến nghị đầu tư cụ thể.
-Phong cách: Chuyên nghiệp, có căn cứ dữ liệu, rõ ràng, có tư duy phản biện."""
+Phong cách: Chuyên nghiệp, có căn cứ dữ liệu, rõ ràng."""
 
         news_summary = "\n".join([f"- {n.get('title','')}: {n.get('body','')[:200]}" for n in news_data[:5]])
         doc_summary = doc_analysis.get("summary", "Không có dữ liệu tài liệu")
         label = "chứng chỉ quỹ" if stock_type == "fund" else "cổ phiếu"
 
-        user_prompt = f"""Phân tích chuyên sâu {label} {symbol} theo cấu trúc sau:
+        user_prompt = f"""Phân tích chuyên sâu {label} **{symbol}**:
 
 ## DỮ LIỆU ĐẦU VÀO
 **Tin tức thị trường:**
@@ -210,24 +191,21 @@ Phong cách: Chuyên nghiệp, có căn cứ dữ liệu, rõ ràng, có tư duy
 {doc_summary}
 
 ---
-## YÊU CẦU BÁO CÁO PHÂN TÍCH
+## YÊU CẦU BÁO CÁO
 
 ### 1. TỔNG QUAN THỊ TRƯỜNG
 - Bối cảnh kinh tế vĩ mô tác động đến {symbol}
-- Tâm lý thị trường hiện tại
-- Ngành/lĩnh vực liên quan
+- Tâm lý thị trường, ngành liên quan
 
 ### 2. PHÂN TÍCH CƠ BẢN
 - Sức khỏe tài chính (thanh khoản, nợ, dòng tiền)
 - Hiệu quả hoạt động kinh doanh
-- Định giá (P/E, P/B, EV/EBITDA so sánh ngành)
-- Lợi thế cạnh tranh và rủi ro
+- Định giá so sánh ngành (P/E, P/B, ROE)
 
 ### 3. PHÂN TÍCH KỸ THUẬT
 - Xu hướng giá ngắn/trung/dài hạn
-- Các mức hỗ trợ và kháng cự quan trọng
-- Tín hiệu từ các chỉ báo (RSI, MACD, MA)
-- Mô hình nến và pattern đáng chú ý
+- Mức hỗ trợ và kháng cự quan trọng
+- Tín hiệu RSI, MACD, MA
 
 ### 4. PHÂN TÍCH GIÁ & ĐỊNH GIÁ
 - Giá hợp lý (Fair Value) ước tính
@@ -236,96 +214,86 @@ Phong cách: Chuyên nghiệp, có căn cứ dữ liệu, rõ ràng, có tư duy
 
 ### 5. KHUYẾN NGHỊ ĐẦU TƯ
 **[MUA / BÁN / GIỮ / THEO DÕI]**
-- Lý do cụ thể
-- Điều kiện vào lệnh
+- Lý do cụ thể, điều kiện vào lệnh
 - Stop-loss đề xuất
-- Tỷ lệ phân bổ danh mục gợi ý (%)
+- Tỷ lệ phân bổ danh mục (%)
 - Thời hạn nắm giữ
 
 ### 6. RỦI RO CẦN THEO DÕI
-- Top 3 rủi ro chính
-- Các sự kiện catalyst sắp tới
+- Top 3 rủi ro chính + catalyst sắp tới
 
-Trả lời đầy đủ, chuyên nghiệp bằng tiếng Việt. Dùng emoji phù hợp cho dễ đọc."""
+Trả lời đầy đủ, chuyên nghiệp bằng tiếng Việt."""
 
         analysis = self._call_groq(system_prompt, user_prompt)
-        recommendation = self._extract_recommendation(analysis)
-
         return {
             "analysis": analysis,
-            "recommendation": recommendation,
+            "recommendation": self._extract_recommendation(analysis),
             "symbol": symbol,
             "type": stock_type
         }
 
     def analyze_forex(self, pair: str, news_data: list) -> dict:
-        system_prompt = """Bạn là chuyên gia phân tích ngoại hối (Forex) với chuyên môn sâu về thị trường Việt Nam và quốc tế.
-Phân tích toàn diện, chuyên nghiệp, dựa trên dữ liệu thực tế."""
+        system_prompt = """Bạn là chuyên gia phân tích ngoại hối (Forex) với chuyên môn sâu về thị trường Việt Nam và quốc tế."""
 
         news_summary = "\n".join([f"- {n.get('title','')}: {n.get('body','')[:200]}" for n in news_data[:5]])
-        base, quote = pair.replace(".", "/").split("/") if "." in pair or "/" in pair else (pair[:3], pair[3:])
+        parts = pair.replace(".", "/").upper()
 
-        user_prompt = f"""Phân tích chuyên sâu cặp tỷ giá {base}/{quote} theo cấu trúc:
+        user_prompt = f"""Phân tích chuyên sâu cặp tỷ giá **{parts}**:
 
 ## TIN TỨC LIÊN QUAN
 {news_summary or 'Không có dữ liệu tin tức'}
 
 ---
-### 1. TỔNG QUAN CẶP TIỀN {base}/{quote}
-- Đặc điểm và tầm quan trọng của cặp tiền này
+### 1. TỔNG QUAN CẶP TIỀN {parts}
+- Đặc điểm và tầm quan trọng
 - Bối cảnh kinh tế hai nước/khu vực
 
 ### 2. PHÂN TÍCH CƠ BẢN
 - Chính sách tiền tệ NHTW liên quan
-- Lạm phát, lãi suất, GDP ảnh hưởng
-- Cán cân thương mại và dòng vốn
-- Yếu tố địa chính trị
+- Lạm phát, lãi suất, GDP
+- Cán cân thương mại, địa chính trị
 
 ### 3. PHÂN TÍCH KỸ THUẬT
 - Xu hướng hiện tại (ngắn/trung/dài hạn)
-- Mức hỗ trợ và kháng cự chính
+- Hỗ trợ và kháng cự chính
 - RSI, MACD, Bollinger Bands
-- Pattern và tín hiệu kỹ thuật
 
-### 4. DỰ BÁO BIẾN ĐỘNG TỶ GIÁ
-- Dự báo ngắn hạn (1-4 tuần)
-- Dự báo trung hạn (1-3 tháng)
+### 4. DỰ BÁO BIẾN ĐỘNG
+- Ngắn hạn (1-4 tuần), trung hạn (1-3 tháng)
 - Vùng mục tiêu tăng/giảm
 
 ### 5. TƯ VẤN
 **[TỶ GIÁ DỰ KIẾN TĂNG / GIẢM / ĐI NGANG]**
-- Chiến lược cho doanh nghiệp xuất/nhập khẩu
-- Chiến lược cho nhà đầu tư cá nhân
-- Mức chốt lời / cắt lỗ gợi ý
+- Chiến lược doanh nghiệp xuất/nhập khẩu
+- Chiến lược nhà đầu tư cá nhân
+- Mức chốt lời / cắt lỗ
 
-### 6. RỦI RO & CÁC SỰ KIỆN CẦN THEO DÕI
+### 6. RỦI RO & SỰ KIỆN CẦN THEO DÕI
 
-Trả lời chuyên nghiệp bằng tiếng Việt với emoji phù hợp."""
+Trả lời chuyên nghiệp bằng tiếng Việt."""
 
         analysis = self._call_groq(system_prompt, user_prompt)
-        direction = self._extract_forex_direction(analysis)
-
         return {
             "analysis": analysis,
-            "direction": direction,
+            "direction": self._extract_forex_direction(analysis),
             "pair": pair
         }
 
     def _extract_recommendation(self, text: str) -> str:
-        text_upper = text.upper()
-        if "MUA" in text_upper and ("KHUYẾN NGHỊ" in text_upper or "**MUA**" in text_upper):
+        t = text.upper()
+        if any(x in t for x in ["**MUA**", "KHUYẾN NGHỊ: MUA", "KHUYẾN NGHỊ MUA", "[MUA]"]):
             return "BUY"
-        elif "BÁN" in text_upper and ("KHUYẾN NGHỊ" in text_upper or "**BÁN**" in text_upper):
+        if any(x in t for x in ["**BÁN**", "KHUYẾN NGHỊ: BÁN", "KHUYẾN NGHỊ BÁN", "[BÁN]"]):
             return "SELL"
-        elif "GIỮ" in text_upper:
+        if any(x in t for x in ["**GIỮ**", "KHUYẾN NGHỊ: GIỮ", "[GIỮ]"]):
             return "HOLD"
         return "WATCH"
 
     def _extract_forex_direction(self, text: str) -> str:
-        text_upper = text.upper()
-        if "TĂNG" in text_upper:
+        t = text.upper()
+        if "DỰ KIẾN TĂNG" in t or "TĂNG GIÁ" in t:
             return "UP"
-        elif "GIẢM" in text_upper:
+        if "DỰ KIẾN GIẢM" in t or "GIẢM GIÁ" in t:
             return "DOWN"
         return "SIDEWAYS"
 
@@ -340,33 +308,24 @@ class AnalysisOrchestrator:
         self.reasoning_agent = ReasoningAgent()
 
     def run_stock_analysis(self, symbol: str, pdf_paths: list = None, stock_type: str = "stock") -> dict:
-        logger.info(f"Starting analysis for {symbol}")
-
-        # Agent 1: News
         news_data = self.news_agent.search_market_news(symbol)
 
-        # Agent 2: Documents
         doc_analysis = {"summary": "", "key_metrics": {}}
         if pdf_paths:
             combined_text = ""
             for path in pdf_paths:
-                text = self.doc_agent.extract_pdf_text(path)
-                combined_text += text + "\n\n"
-                try:
-                    os.remove(path)
-                except:
-                    pass
+                combined_text += self.doc_agent.extract_pdf_text(path) + "\n\n"
+                try: os.remove(path)
+                except: pass
             if combined_text.strip():
                 doc_analysis = self.doc_agent.analyze_document(combined_text, symbol)
 
-        # Agent 3: Reasoning
         result = self.reasoning_agent.analyze_stock(symbol, news_data, doc_analysis, stock_type)
         result["news_count"] = len(news_data)
         result["has_documents"] = bool(pdf_paths)
         return result
 
     def run_forex_analysis(self, pair: str) -> dict:
-        logger.info(f"Starting forex analysis for {pair}")
         news_data = self.news_agent.search_forex_news(pair)
         result = self.reasoning_agent.analyze_forex(pair, news_data)
         result["news_count"] = len(news_data)
@@ -388,8 +347,8 @@ def health():
     return jsonify({
         "status": "ok",
         "agents": {
-            "news": orchestrator.news_agent.available,
-            "document": orchestrator.doc_agent.available,
+            "news":      orchestrator.news_agent.available,
+            "document":  orchestrator.doc_agent.available,
             "reasoning": orchestrator.reasoning_agent.available
         }
     })
@@ -398,23 +357,19 @@ def health():
 def analyze():
     try:
         symbol = request.form.get("symbol", "").strip().upper()
-        analysis_type = request.form.get("type", "stock")  # stock | fund | forex
-        urls = request.form.get("urls", "")
+        analysis_type = request.form.get("type", "stock")
 
         if not symbol:
             return jsonify({"error": "Vui lòng nhập mã chứng khoán hoặc cặp tiền tệ"}), 400
 
-        # Forex analysis
         if analysis_type == "forex" or ("." in symbol and len(symbol) <= 7):
             result = orchestrator.run_forex_analysis(symbol)
             return jsonify({"success": True, "data": result, "mode": "forex"})
 
-        # Save uploaded PDFs
         pdf_paths = []
         if "pdfs" in request.files:
-            files = request.files.getlist("pdfs")
-            for f in files:
-                if f and f.filename.endswith(".pdf"):
+            for f in request.files.getlist("pdfs"):
+                if f and f.filename.lower().endswith(".pdf"):
                     tmp_path = str(TEMP_DIR / f"{uuid.uuid4()}.pdf")
                     f.save(tmp_path)
                     pdf_paths.append(tmp_path)
@@ -423,31 +378,24 @@ def analyze():
         return jsonify({"success": True, "data": result, "mode": "stock"})
 
     except Exception as e:
-        logger.error(f"Analysis error: {e}")
+        logger.error(f"Analysis error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/scrape-url", methods=["POST"])
 def scrape_url():
-    """Scrape financial data from VCBS or VCBF URLs"""
     try:
         data = request.get_json()
         url = data.get("url", "")
         if not url:
             return jsonify({"error": "URL không hợp lệ"}), 400
-
         import requests as req
         from bs4 import BeautifulSoup
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         resp = req.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(resp.text, "lxml")
-
-        # Extract text content
         for tag in soup(["script", "style", "nav", "footer"]):
             tag.decompose()
         text = soup.get_text(separator="\n", strip=True)[:5000]
-
         return jsonify({"success": True, "content": text, "url": url})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
