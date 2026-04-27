@@ -4,3 +4,7 @@ gunicorn==22.0.0
 duckduckgo-search==6.2.13
 groq>=0.15.0
 python-dotenv==1.0.1
+requests==2.32.3
+pandas==2.2.2
+numpy==1.26.4
+matplotlib==3.9.0
