@@ -2,15 +2,12 @@ services:
   - type: web
     name: vn-stock-ai
     runtime: python
-    buildCommand: pip install flask==3.0.3 flask-cors==4.0.1 requests==2.32.3 groq==0.9.0 google-genai==1.10.0 pdfplumber==0.11.3 python-dotenv==1.0.1 duckduckgo-search==6.2.13 gunicorn==22.0.0 beautifulsoup4==4.12.3 lxml==5.2.2
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: GROQ_API_KEY_STOCK
-        value: ""
-        sync: false
-      - key: GEMINI_API_KEY_STOCK
         value: ""
         sync: false
     plan: free
