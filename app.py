@@ -1,6 +1,6 @@
 """
-VN Stock AI - Multi-Agent Financial Analysis System
-Flask serves HTML inline (no template folder needed)
+VN Stock AI — Multi-Agent Financial Analysis
+Python 3.11 | Flask | Groq DeepSeek-R1 | Gemini | DuckDuckGo
 """
 
 import os, uuid, tempfile, logging
@@ -10,7 +10,6 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 
 load_dotenv()
-
 app = Flask(__name__)
 CORS(app)
 logging.basicConfig(level=logging.INFO)
@@ -19,7 +18,6 @@ logger = logging.getLogger(__name__)
 TEMP_DIR = Path(tempfile.gettempdir()) / "vnstock_ai"
 TEMP_DIR.mkdir(exist_ok=True)
 
-# ── HTML embedded ──
 INDEX_HTML = """<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -1427,39 +1425,60 @@ function copyAnalysis() {
 </html>
 """
 
-# ─────────────────────────────────────────────
-# AGENT 1: NEWS COLLECTOR (DuckDuckGo)
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════
+# AGENT 1 — NEWS (DuckDuckGo, free)
+# ═══════════════════════════════════════════
 class NewsAgent:
     def __init__(self):
         try:
             from duckduckgo_search import DDGS
             self.available = True
         except Exception as e:
-            logger.warning(f"DuckDuckGo not available: {e}")
+            logger.warning(f"DDG unavailable: {e}")
             self.available = False
 
-    def search(self, query, max_results=8):
+    def _search(self, query, max_results=10):
         if not self.available:
             return []
         try:
             from duckduckgo_search import DDGS
-            with DDGS() as ddgs:
-                return list(ddgs.text(query + " 2025", region="vn-vi", max_results=max_results))
+            with DDGS() as d:
+                return list(d.text(query, region="vn-vi", max_results=max_results))
         except Exception as e:
             logger.error(f"DDG error: {e}")
             return []
 
-    def search_market_news(self, symbol):
-        return self.search(f"{symbol} chứng khoán tài chính Việt Nam")
+    def market_news(self, symbol):
+        results = []
+        for q in [
+            f"{symbol} cổ phiếu kết quả kinh doanh 2025",
+            f"{symbol} HOSE HNX tin tức mới nhất",
+            f"VN-Index thị trường chứng khoán Việt Nam 2025",
+        ]:
+            results += self._search(q, max_results=5)
+        seen = set()
+        unique = []
+        for r in results:
+            t = r.get("title","")
+            if t and t not in seen:
+                seen.add(t)
+                unique.append(r)
+        return unique[:12]
 
-    def search_forex_news(self, pair):
-        return self.search(f"tỷ giá {pair} phân tích kỹ thuật")
+    def fund_news(self, symbol):
+        results = self._search(f"{symbol} chứng chỉ quỹ NAV hiệu suất 2025", max_results=8)
+        results += self._search(f"quỹ mở ETF Việt Nam 2025", max_results=5)
+        return results[:10]
+
+    def forex_news(self, pair):
+        results = self._search(f"tỷ giá {pair} NHNN chính sách tiền tệ 2025", max_results=8)
+        results += self._search(f"{pair} forex technical analysis 2025", max_results=5)
+        return results[:10]
 
 
-# ─────────────────────────────────────────────
-# AGENT 2: DOCUMENT READER (Gemini google-genai)
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════
+# AGENT 2 — DOCUMENT READER (Gemini, free)
+# ═══════════════════════════════════════════
 class DocumentAgent:
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY", "")
@@ -1469,41 +1488,65 @@ class DocumentAgent:
             try:
                 from google import genai
                 self.client = genai.Client(api_key=api_key)
-                self.model_id = "gemini-2.0-flash"
+                self.model = "gemini-2.0-flash"
                 logger.info("Gemini OK")
             except Exception as e:
-                logger.error(f"Gemini init error: {e}")
+                logger.error(f"Gemini init: {e}")
                 self.available = False
 
-    def extract_pdf_text(self, pdf_path):
+    def extract_pdf(self, path):
         try:
             import pdfplumber
-            text = ""
-            with pdfplumber.open(pdf_path) as pdf:
-                for page in pdf.pages:
-                    t = page.extract_text()
-                    if t: text += t + "\n"
-            return text[:50000]
+            txt = ""
+            with pdfplumber.open(path) as pdf:
+                for pg in pdf.pages:
+                    t = pg.extract_text()
+                    if t: txt += t + "\n"
+            return txt[:60000]
         except Exception as e:
             logger.error(f"PDF error: {e}")
             return ""
 
-    def analyze_document(self, text, symbol):
+    def analyze(self, text, symbol):
         if not self.available or not text:
-            return {"summary": "Không có dữ liệu tài liệu", "key_metrics": {}}
+            return {"summary": "", "available": False}
         try:
-            prompt = f"""Phân tích tài chính {symbol}. Trích xuất: doanh thu, lợi nhuận, EPS, P/E, ROE, ROA, nợ, tăng trưởng, điểm mạnh/yếu/rủi ro. Tiếng Việt, chuyên nghiệp.\n\nTài liệu:\n{text[:20000]}"""
-            resp = self.client.models.generate_content(model=self.model_id, contents=prompt)
-            return {"summary": resp.text, "key_metrics": {}}
+            prompt = f"""Bạn là CFA chuyên phân tích tài chính doanh nghiệp Việt Nam.
+Phân tích tài liệu tài chính của **{symbol}**, trích xuất đầy đủ:
+
+**A. CHỈ SỐ TÀI CHÍNH CHÍNH:**
+- Doanh thu, EBITDA, LNST (3 năm gần nhất + tăng trưởng YoY)
+- EPS, P/E, P/B, EV/EBITDA
+- ROE, ROA, ROIC
+- Tỷ lệ nợ/vốn chủ (D/E), Current Ratio, Quick Ratio
+- Dòng tiền tự do (FCF)
+
+**B. PHÂN TÍCH CHẤT LƯỢNG:**
+- Chất lượng lợi nhuận (accruals, cash conversion)
+- Hiệu quả sử dụng vốn
+- Rủi ro tài chính (đòn bẩy, thanh khoản)
+
+**C. SO SÁNH NGÀNH:**
+- Định giá so với trung bình ngành
+- Điểm mạnh/yếu cạnh tranh
+
+Tài liệu:
+{text[:25000]}
+
+Trả lời tiếng Việt, súc tích, có số liệu cụ thể."""
+            resp = self.client.models.generate_content(model=self.model, contents=prompt)
+            return {"summary": resp.text, "available": True}
         except Exception as e:
-            logger.error(f"Gemini analyze error: {e}")
-            return {"summary": f"Lỗi Gemini: {e}", "key_metrics": {}}
+            logger.error(f"Gemini analyze: {e}")
+            return {"summary": f"Lỗi Gemini: {e}", "available": False}
 
 
-# ─────────────────────────────────────────────
-# AGENT 3: REASONING (Groq / DeepSeek-R1)
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════
+# AGENT 3 — REASONING (Groq/DeepSeek-R1, free)
+# ═══════════════════════════════════════════
 class ReasoningAgent:
+    MODELS = ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile", "llama3-70b-8192"]
+
     def __init__(self):
         api_key = os.getenv("GROQ_API_KEY", "")
         self.available = bool(api_key)
@@ -1514,162 +1557,340 @@ class ReasoningAgent:
                 self.client = Groq(api_key=api_key)
                 logger.info("Groq OK")
             except Exception as e:
-                logger.error(f"Groq init error: {e}")
+                logger.error(f"Groq init: {e}")
                 self.available = False
 
-    def _call(self, system, user):
+    def _call(self, system, user, max_tokens=6000):
         if not self.available:
-            return "⚠ Groq API chưa được cấu hình. Thêm GROQ_API_KEY vào Environment Variables trên Render."
-        for model in ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile"]:
+            return "⚠ Chưa cấu hình GROQ_API_KEY. Vào Render → Environment → thêm GROQ_API_KEY."
+        for model in self.MODELS:
             try:
                 r = self.client.chat.completions.create(
                     model=model,
                     messages=[{"role":"system","content":system},{"role":"user","content":user}],
-                    temperature=0.3, max_tokens=4096
+                    temperature=0.2,
+                    max_tokens=max_tokens,
                 )
                 return r.choices[0].message.content
             except Exception as e:
-                logger.warning(f"Groq {model} failed: {e}")
-        return "Lỗi: Không thể kết nối Groq API."
+                logger.warning(f"Groq {model}: {e}")
+        return "❌ Không thể kết nối Groq API. Kiểm tra API key."
 
-    def analyze_stock(self, symbol, news_data, doc_analysis, stock_type="stock"):
-        news_txt = "\n".join([f"- {n.get('title','')}: {n.get('body','')[:200]}" for n in news_data[:5]])
-        doc_txt = doc_analysis.get("summary","Không có dữ liệu tài liệu")
+    # ── STOCK ──
+    def analyze_stock(self, symbol, news, doc, stock_type="stock"):
         label = "chứng chỉ quỹ" if stock_type == "fund" else "cổ phiếu"
-        system = "Bạn là chuyên gia phân tích chứng khoán Việt Nam 20 năm kinh nghiệm. Phân tích toàn diện, chuyên nghiệp."
-        user = f"""Phân tích chuyên sâu {label} **{symbol}**
+        news_txt = "\n".join([f"• {n.get('title','')} — {n.get('body','')[:300]}" for n in news[:8]])
+        doc_txt  = doc.get("summary", "Không có tài liệu")
+        doc_note = "✅ Đã phân tích tài liệu tài chính" if doc.get("available") else "⚠ Không có tài liệu PDF"
 
-**Tin tức:**
-{news_txt or "Không có"}
+        system = """Bạn là chuyên gia phân tích chứng khoán cấp cao (CFA, CAIA) với 20+ năm kinh nghiệm tại thị trường Việt Nam.
+Nhiệm vụ: Viết báo cáo phân tích đầu tư chuyên nghiệp, sâu sắc, có căn cứ số liệu.
+Phong cách: Như báo cáo của SSI Research / VCSC / Maybank IB — rõ ràng, có luận điểm, không chung chung.
+Quan trọng: Luôn đưa ra con số cụ thể, vùng giá cụ thể, tỷ lệ cụ thể."""
 
-**Tài liệu tài chính:**
+        user = f"""# YÊU CẦU PHÂN TÍCH CHUYÊN SÂU: {label.upper()} **{symbol}**
+
+## NGUỒN DỮ LIỆU
+**Tin tức thị trường ({len(news)} bài):**
+{news_txt or "Không có tin tức"}
+
+**Phân tích tài liệu:** {doc_note}
 {doc_txt}
 
 ---
-Viết báo cáo đầy đủ theo cấu trúc:
-### 1. TỔNG QUAN THỊ TRƯỜNG
-### 2. PHÂN TÍCH CƠ BẢN (tài chính, định giá P/E P/B ROE so ngành)
-### 3. PHÂN TÍCH KỸ THUẬT (xu hướng, hỗ trợ/kháng cự, RSI, MACD)
-### 4. ĐỊNH GIÁ & GIÁ MỤC TIÊU (Fair Value, target 3-6 tháng)
-### 5. KHUYẾN NGHỊ: **[MUA / BÁN / GIỮ / THEO DÕI]** (lý do, điều kiện vào lệnh, stop-loss, % danh mục, thời hạn)
-### 6. RỦI RO & CATALYST
+## CẤU TRÚC BÁO CÁO YÊU CẦU
 
-Tiếng Việt, chuyên nghiệp, dùng emoji."""
-        analysis = self._call(system, user)
-        return {"analysis": analysis, "recommendation": self._rec(analysis), "symbol": symbol, "type": stock_type}
+### 📊 1. TÓM TẮT ĐIỀU HÀNH (Executive Summary)
+- Luận điểm đầu tư chính (1 đoạn súc tích)
+- Khuyến nghị: **[MUA / BÁN / GIỮ / THEO DÕI]** + Giá mục tiêu
+- Risk/Reward ratio ước tính
 
-    def analyze_forex(self, pair, news_data):
-        news_txt = "\n".join([f"- {n.get('title','')}: {n.get('body','')[:200]}" for n in news_data[:5]])
-        system = "Bạn là chuyên gia phân tích ngoại hối với chuyên môn về thị trường Việt Nam và quốc tế."
-        user = f"""Phân tích cặp tỷ giá **{pair.upper()}**
+### 🌍 2. BỐI CẢNH VĨ MÔ & NGÀNH
+- Kinh tế Việt Nam: GDP, lạm phát, lãi suất, tỷ giá ảnh hưởng
+- Chu kỳ ngành và vị thế của {symbol} trong ngành
+- Xu hướng dài hạn tác động (ESG, chuyển đổi số, dịch chuyển chuỗi cung ứng...)
 
-**Tin tức:**
-{news_txt or "Không có"}
+### 💰 3. PHÂN TÍCH CƠ BẢN CHUYÊN SÂU
+#### 3.1 Sức khỏe tài chính
+- Doanh thu & tăng trưởng (ước tính nếu không có số liệu)
+- Biên lợi nhuận (gross/EBIT/net margin)
+- Dòng tiền & chất lượng lợi nhuận
+- Cấu trúc nợ & khả năng trả nợ
+
+#### 3.2 Định giá (Valuation)
+- P/E forward ước tính vs ngành vs lịch sử
+- P/B so với ROE → xác định rẻ/đắt
+- Phương pháp DCF: ước tính fair value
+- So sánh với peers trong ngành
+
+#### 3.3 Lợi thế cạnh tranh (Moat)
+- Lợi thế bền vững là gì?
+- Rủi ro mất thị phần
+
+### 📈 4. PHÂN TÍCH KỸ THUẬT
+#### 4.1 Xu hướng & Momentum
+- Xu hướng ngắn hạn (1-4 tuần): Tăng/Giảm/Đi ngang
+- Xu hướng trung hạn (1-3 tháng)
+- Xu hướng dài hạn (6-12 tháng)
+
+#### 4.2 Các mức giá quan trọng
+- **Kháng cự**: Mức 1, Mức 2, Mức 3
+- **Hỗ trợ**: Mức 1, Mức 2, Mức 3
+
+#### 4.3 Chỉ báo kỹ thuật
+- RSI(14): Vùng hiện tại → quá mua/bán/trung lập
+- MACD: Tín hiệu bullish/bearish
+- MA20/MA50/MA200: Vị trí giá so với các đường MA
+- Bollinger Bands: Vùng nén/giãn
+- Volume: Xác nhận xu hướng
+
+#### 4.4 Mô hình & Pattern
+- Mô hình giá đáng chú ý (nếu có)
+- Fibonacci retracement levels
+
+### 💵 5. PHÂN TÍCH GIÁ & ĐỊNH GIÁ TỔNG HỢP
+- **Fair Value** (giá trị hợp lý): ước tính cụ thể
+- **Bull case** (kịch bản lạc quan): giá mục tiêu + điều kiện
+- **Base case** (kịch bản cơ sở): giá mục tiêu + xác suất
+- **Bear case** (kịch bản bi quan): downside + điều kiện
+- Upside/Downside tiềm năng (%)
+
+### ✅ 6. KHUYẾN NGHỊ ĐẦU TƯ CHI TIẾT
+**QUYẾT ĐỊNH: [MUA / BÁN / GIỮ / THEO DÕI]**
+
+| Thông số | Giá trị |
+|----------|---------|
+| Giá mục tiêu 3 tháng | xxx |
+| Giá mục tiêu 6 tháng | xxx |
+| Điểm vào lệnh lý tưởng | xxx |
+| Stop-loss | xxx |
+| Tỷ lệ Risk/Reward | x:x |
+| % danh mục đề xuất | x% |
+| Thời hạn nắm giữ | xxx |
+
+- **Luận điểm MUA/BÁN/GIỮ** (3-5 điểm cụ thể)
+- **Điều kiện để thay đổi khuyến nghị**
+
+### ⚠️ 7. RỦI RO & CATALYST
+#### Rủi ro chính (xếp hạng theo mức độ)
+1. Rủi ro #1 + xác suất + tác động
+2. Rủi ro #2
+3. Rủi ro #3
+
+#### Catalyst tích cực sắp tới
+- Sự kiện 1 + thời gian dự kiến
+- Sự kiện 2
+
+### 📅 8. LỊCH SỰ KIỆN CẦN THEO DÕI
+- ĐHCĐ, công bố KQKD, ngày GDRCC, sự kiện ngành...
 
 ---
-### 1. TỔNG QUAN CẶP TIỀN
-### 2. PHÂN TÍCH CƠ BẢN (chính sách NHTW, lãi suất, lạm phát, thương mại)
-### 3. PHÂN TÍCH KỸ THUẬT (xu hướng, hỗ trợ/kháng cự, RSI, MACD, Bollinger)
-### 4. DỰ BÁO (ngắn hạn 1-4 tuần, trung hạn 1-3 tháng, vùng mục tiêu)
-### 5. TƯ VẤN: **[TĂNG / GIẢM / ĐI NGANG]** (chiến lược xuất nhập khẩu, nhà đầu tư cá nhân, chốt lời/cắt lỗ)
-### 6. RỦI RO & SỰ KIỆN CẦN THEO DÕI
+Viết đầy đủ, chuyên nghiệp, bằng tiếng Việt. Dùng số liệu ước tính có căn cứ nếu không có data cụ thể. Dùng emoji phù hợp."""
 
-Tiếng Việt, chuyên nghiệp."""
-        analysis = self._call(system, user)
-        return {"analysis": analysis, "direction": self._dir(analysis), "pair": pair}
+        result = self._call(system, user, max_tokens=6000)
+        return {
+            "analysis": result,
+            "recommendation": self._extract_rec(result),
+            "symbol": symbol,
+            "type": stock_type,
+        }
 
-    def _rec(self, t):
+    # ── FOREX ──
+    def analyze_forex(self, pair, news):
+        news_txt = "\n".join([f"• {n.get('title','')} — {n.get('body','')[:300]}" for n in news[:8]])
+        parts = pair.upper().replace(".", "/")
+
+        system = """Bạn là chuyên gia phân tích ngoại hối (FX) cấp cao với kinh nghiệm tại các NHTM lớn Việt Nam.
+Phân tích sâu, có số liệu cụ thể, phong cách như báo cáo FX của Vietcombank/BIDV Research."""
+
+        user = f"""# PHÂN TÍCH TỶ GIÁ CHUYÊN SÂU: **{parts}**
+
+## TIN TỨC & DỮ LIỆU
+{news_txt or "Không có tin tức"}
+
+---
+## YÊU CẦU BÁO CÁO
+
+### 🌐 1. TỔNG QUAN CẶP TIỀN {parts}
+- Đặc điểm & thanh khoản của cặp tiền
+- Tầm quan trọng với kinh tế Việt Nam (nếu liên quan VND)
+- Bối cảnh địa kinh tế hiện tại
+
+### 📊 2. PHÂN TÍCH CƠ BẢN (Fundamental)
+#### Yếu tố vĩ mô
+- Chính sách tiền tệ: Fed/ECB/BOJ/NHNN → hướng lãi suất
+- Chênh lệch lãi suất (interest rate differential)
+- Lạm phát 2 nước: CPI gần nhất, dự báo
+- Tăng trưởng kinh tế: GDP, PMI, việc làm
+- Cán cân thương mại & dòng vốn FDI/FII
+
+#### Yếu tố địa chính trị & thị trường
+- Rủi ro địa chính trị ảnh hưởng
+- Tâm lý thị trường (risk-on/risk-off)
+- Vị thế của USD Index (DXY) nếu liên quan
+
+### 📈 3. PHÂN TÍCH KỸ THUẬT
+#### Xu hướng
+- Ngắn hạn (1-2 tuần): 
+- Trung hạn (1-3 tháng):
+- Dài hạn (6-12 tháng):
+
+#### Mức giá quan trọng
+- **Kháng cự**: R1, R2, R3 (giá cụ thể)
+- **Hỗ trợ**: S1, S2, S3 (giá cụ thể)
+- Pivot point ngày/tuần
+
+#### Chỉ báo kỹ thuật
+- RSI(14), MACD, Stochastic
+- MA50/MA200 & Golden/Death Cross
+- Bollinger Bands
+- ATR (độ biến động trung bình)
+
+### 🔮 4. DỰ BÁO TỶ GIÁ
+| Kỳ hạn | Dự báo | Kịch bản lạc quan | Kịch bản bi quan |
+|--------|--------|-------------------|-----------------|
+| 1 tuần | | | |
+| 1 tháng | | | |
+| 3 tháng | | | |
+
+### 💼 5. TƯ VẤN CHIẾN LƯỢC
+**NHẬN ĐỊNH: [TỶ GIÁ DỰ KIẾN TĂNG / GIẢM / ĐI NGANG]**
+
+#### Doanh nghiệp xuất khẩu
+- Chiến lược bán ngoại tệ kỳ hạn
+- Mức tỷ giá nên chốt
+
+#### Doanh nghiệp nhập khẩu
+- Chiến lược mua ngoại tệ
+- Timing phù hợp
+
+#### Nhà đầu tư cá nhân
+- Nên mua/bán/giữ ngoại tệ?
+- Mức giá target & stop-loss
+
+### ⚠️ 6. RỦI RO & SỰ KIỆN CẦN THEO DÕI
+- Top 3 rủi ro tăng/giảm tỷ giá
+- Lịch sự kiện kinh tế quan trọng (FOMC, CPI, NFP...)
+
+Viết đầy đủ, chuyên nghiệp, tiếng Việt, có số liệu ước tính cụ thể."""
+
+        result = self._call(system, user, max_tokens=5000)
+        return {
+            "analysis": result,
+            "direction": self._extract_dir(result),
+            "pair": pair,
+        }
+
+    def _extract_rec(self, t):
         u = t.upper()
-        if any(x in u for x in ["**MUA**","[MUA]","KHUYẾN NGHỊ MUA","KHUYẾN NGHỊ: MUA"]): return "BUY"
-        if any(x in u for x in ["**BÁN**","[BÁN]","KHUYẾN NGHỊ BÁN","KHUYẾN NGHỊ: BÁN"]): return "SELL"
-        if any(x in u for x in ["**GIỮ**","[GIỮ]","KHUYẾN NGHỊ GIỮ"]): return "HOLD"
+        for kw, val in [
+            (["**MUA**","[MUA]","KHUYẾN NGHỊ: MUA","KHUYẾN NGHỊ MUA","QUYẾT ĐỊNH: MUA"], "BUY"),
+            (["**BÁN**","[BÁN]","KHUYẾN NGHỊ: BÁN","KHUYẾN NGHỊ BÁN","QUYẾT ĐỊNH: BÁN"], "SELL"),
+            (["**GIỮ**","[GIỮ]","KHUYẾN NGHỊ: GIỮ","QUYẾT ĐỊNH: GIỮ"], "HOLD"),
+        ]:
+            if any(k in u for k in kw): return val
         return "WATCH"
 
-    def _dir(self, t):
+    def _extract_dir(self, t):
         u = t.upper()
-        if "DỰ KIẾN TĂNG" in u or "[TĂNG]" in u or "**TĂNG**" in u: return "UP"
-        if "DỰ KIẾN GIẢM" in u or "[GIẢM]" in u or "**GIẢM**" in u: return "DOWN"
+        if any(k in u for k in ["DỰ KIẾN TĂNG","[TĂNG]","TỶ GIÁ TĂNG","NHẬN ĐỊNH: TĂNG"]): return "UP"
+        if any(k in u for k in ["DỰ KIẾN GIẢM","[GIẢM]","TỶ GIÁ GIẢM","NHẬN ĐỊNH: GIẢM"]): return "DOWN"
         return "SIDEWAYS"
 
 
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════
 # ORCHESTRATOR
-# ─────────────────────────────────────────────
-class AnalysisOrchestrator:
+# ═══════════════════════════════════════════
+class Orchestrator:
     def __init__(self):
         self.news = NewsAgent()
         self.doc  = DocumentAgent()
         self.ai   = ReasoningAgent()
 
-    def stock(self, symbol, pdf_paths=None, stock_type="stock"):
-        news = self.news.search_market_news(symbol)
-        doc  = {"summary":"","key_metrics":{}}
+    def run_stock(self, symbol, pdf_paths=None, stock_type="stock"):
+        if stock_type == "fund":
+            news = self.news.fund_news(symbol)
+        else:
+            news = self.news.market_news(symbol)
+        doc = {"summary": "", "available": False}
         if pdf_paths:
             txt = ""
             for p in pdf_paths:
-                txt += self.doc.extract_pdf_text(p) + "\n\n"
+                txt += self.doc.extract_pdf(p) + "\n\n"
                 try: os.remove(p)
                 except: pass
             if txt.strip():
-                doc = self.doc.analyze_document(txt, symbol)
+                doc = self.doc.analyze(txt, symbol)
         r = self.ai.analyze_stock(symbol, news, doc, stock_type)
-        r["news_count"] = len(news)
+        r["news_count"]    = len(news)
         r["has_documents"] = bool(pdf_paths)
         return r
 
-    def forex(self, pair):
-        news = self.news.search_forex_news(pair)
+    def run_forex(self, pair):
+        news = self.news.forex_news(pair)
         r = self.ai.analyze_forex(pair, news)
         r["news_count"] = len(news)
         return r
 
-orc = AnalysisOrchestrator()
+
+orc = Orchestrator()
 
 
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════
 # ROUTES
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════
 @app.route("/")
 def index():
     return Response(INDEX_HTML, mimetype="text/html")
 
 @app.route("/health")
 def health():
-    return jsonify({"status":"ok","agents":{"news":orc.news.available,"document":orc.doc.available,"reasoning":orc.ai.available}})
+    return jsonify({
+        "status": "ok",
+        "agents": {
+            "news":      orc.news.available,
+            "document":  orc.doc.available,
+            "reasoning": orc.ai.available,
+        }
+    })
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
     try:
-        symbol = request.form.get("symbol","").strip().upper()
-        atype  = request.form.get("type","stock")
+        symbol = request.form.get("symbol", "").strip().upper()
+        atype  = request.form.get("type", "stock")
         if not symbol:
-            return jsonify({"error":"Vui lòng nhập mã chứng khoán"}), 400
-        if atype == "forex" or ("." in symbol and len(symbol) <= 7):
-            return jsonify({"success":True,"data":orc.forex(symbol),"mode":"forex"})
+            return jsonify({"error": "Vui lòng nhập mã"}), 400
+        # Forex detection
+        if atype == "forex" or ("." in symbol and len(symbol) <= 8):
+            return jsonify({"success": True, "data": orc.run_forex(symbol), "mode": "forex"})
+        # PDF uploads
         pdf_paths = []
         if "pdfs" in request.files:
             for f in request.files.getlist("pdfs"):
                 if f and f.filename.lower().endswith(".pdf"):
                     p = str(TEMP_DIR / f"{uuid.uuid4()}.pdf")
-                    f.save(p); pdf_paths.append(p)
-        return jsonify({"success":True,"data":orc.stock(symbol, pdf_paths, atype),"mode":"stock"})
+                    f.save(p)
+                    pdf_paths.append(p)
+        return jsonify({"success": True, "data": orc.run_stock(symbol, pdf_paths, atype), "mode": "stock"})
     except Exception as e:
-        logger.error(f"analyze error: {e}", exc_info=True)
-        return jsonify({"error":str(e)}), 500
+        logger.error(f"/api/analyze error: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/scrape-url", methods=["POST"])
 def scrape_url():
     try:
-        url = (request.get_json() or {}).get("url","")
-        if not url: return jsonify({"error":"No URL"}), 400
+        url = (request.get_json() or {}).get("url", "")
+        if not url:
+            return jsonify({"error": "No URL"}), 400
         import requests as req
         from bs4 import BeautifulSoup
-        resp = req.get(url, headers={"User-Agent":"Mozilla/5.0"}, timeout=10)
-        soup = BeautifulSoup(resp.text,"lxml")
+        resp = req.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        soup = BeautifulSoup(resp.text, "lxml")
         for t in soup(["script","style","nav","footer"]): t.decompose()
-        return jsonify({"success":True,"content":soup.get_text(separator="\n",strip=True)[:5000]})
+        return jsonify({"success": True, "content": soup.get_text(separator="\n", strip=True)[:5000]})
     except Exception as e:
-        return jsonify({"error":str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT",5000)), debug=False)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)
