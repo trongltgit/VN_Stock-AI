@@ -1,5 +1,5 @@
 """
-VN Stock AI - Phiên bản sửa lỗi + dùng templates/index.html
+VN Stock AI - Sửa lỗi toUpperCase + Model Groq + Tương thích với templates/index.html
 """
 
 import os
@@ -30,6 +30,9 @@ class NewsAgent:
             return []
 
 class ReasoningAgent:
+    # MODELS mới - thay thế model cũ bị decommissioned
+    MODELS = ["llama-3.3-70b-versatile", "llama3-70b-8192"]
+
     def __init__(self):
         key = os.getenv("GROQ_API_KEY_STOCK")
         self.available = bool(key)
@@ -45,29 +48,44 @@ class ReasoningAgent:
 
     def analyze(self, symbol, stock_type="stock"):
         if not self.client:
-            return "❌ Chưa cấu hình GROQ_API_KEY_STOCK"
+            return "❌ Chưa cấu hình GROQ_API_KEY_STOCK trên Render.com"
 
-        system = """Bạn là chuyên gia phân tích chứng khoán Việt Nam giàu kinh nghiệm.
-Trả lời bằng tiếng Việt, rõ ràng, chuyên nghiệp. Luôn đưa ra khuyến nghị MUA/BÁN/GIỮ + giá mục tiêu."""
+        system = """Bạn là chuyên gia phân tích chứng khoán Việt Nam. 
+Trả lời bằng tiếng Việt, chuyên nghiệp, có cấu trúc rõ ràng.
+Luôn đưa ra khuyến nghị: **[MUA / BÁN / GIỮ]** + giá mục tiêu + luận điểm."""
 
-        user = f"""Phân tích chuyên sâu {stock_type} **{symbol}**:
-- Tình hình kinh doanh và tài chính
-- Định giá hợp lý
-- Xu hướng kỹ thuật
-- Khuyến nghị đầu tư cụ thể (MUA/BÁN/GIỮ) kèm giá mục tiêu
+        user = f"""Phân tích chi tiết {stock_type} **{symbol}** năm 2026:
+- Tóm tắt tình hình kinh doanh
+- Định giá (P/E, P/B, fair value)
+- Phân tích kỹ thuật ngắn hạn/trung hạn
+- Khuyến nghị đầu tư cụ thể (MUA/BÁN/GIỮ) kèm giá mục tiêu 3-6 tháng
 - Rủi ro chính"""
 
-        try:
-            r = self.client.chat.completions.create(
-                model="deepseek-r1-distill-llama-70b",
-                messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-                temperature=0.3,
-                max_tokens=5500,
-            )
-            return r.choices[0].message.content
-        except Exception as e:
-            logger.error(f"Groq error: {e}")
-            return f"Lỗi Groq: {str(e)}"
+        for model in self.MODELS:
+            try:
+                r = self.client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+                    temperature=0.3,
+                    max_tokens=5500,
+                )
+                analysis = r.choices[0].message.content
+
+                # Trích xuất recommendation đơn giản để frontend không lỗi
+                rec = "HOLD"
+                upper = analysis.upper()
+                if any(x in upper for x in ["MUA", "BUY"]): rec = "BUY"
+                elif any(x in upper for x in ["BÁN", "SELL"]): rec = "SELL"
+
+                return {
+                    "analysis": analysis,
+                    "recommendation": rec
+                }
+            except Exception as e:
+                logger.warning(f"Model {model} failed: {e}")
+                continue
+
+        return {"analysis": "Lỗi kết nối Groq. Vui lòng thử lại sau.", "recommendation": "WATCH"}
 
 class Orchestrator:
     def __init__(self):
@@ -75,11 +93,12 @@ class Orchestrator:
         self.ai = ReasoningAgent()
 
     def analyze(self, symbol, stock_type="stock"):
-        analysis = self.ai.analyze(symbol, stock_type)
+        result = self.ai.analyze(symbol, stock_type)
         return {
             "symbol": symbol,
             "type": stock_type,
-            "analysis": analysis,
+            "analysis": result["analysis"],
+            "recommendation": result["recommendation"],
             "news_count": 0,
             "has_documents": False
         }
@@ -100,7 +119,6 @@ def analyze():
         if not symbol:
             return jsonify({"error": "Vui lòng nhập mã chứng khoán"}), 400
 
-        # SỬA LỖI Ở ĐÂY: Dùng .upper() thay vì .toUpperCase()
         symbol = symbol.upper()
 
         result = orc.analyze(symbol, stock_type)
@@ -114,8 +132,7 @@ def analyze():
 def health():
     return jsonify({
         "status": "ok",
-        "groq": orc.ai.available,
-        "gemini": bool(os.getenv("GEMINI_API_KEY_STOCK"))
+        "groq": orc.ai.available
     })
 
 if __name__ == "__main__":
