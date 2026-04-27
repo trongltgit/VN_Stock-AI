@@ -1,10 +1,12 @@
 services:
   - type: web
     name: vn-stock-ai
-    env: python
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: gunicorn backend.app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: GROQ_API_KEY_STOCK
         sync: false
       - key: GEMINI_API_KEY_STOCK
