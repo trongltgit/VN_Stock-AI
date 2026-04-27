@@ -1,10 +1,6 @@
 flask==3.0.3
 flask-cors==4.0.1
-duckduckgo-search==6.2.13
-groq>=0.15.0          # ← Đã fix lỗi proxies
-google-genai==1.10.0   # hoặc mới hơn nếu có
-pdfplumber==0.11.3
-python-dotenv==1.0.1
 gunicorn==22.0.0
-beautifulsoup4==4.12.3
-lxml==5.2.2
+duckduckgo-search==6.2.13
+groq>=0.15.0
+python-dotenv==1.0.1
