@@ -1,4 +1,4 @@
-"""
+  """
 VN Stock AI — Multi-Agent Financial Analysis
 Python 3.11 | Flask | Groq DeepSeek-R1 | Gemini | DuckDuckGo
 """
@@ -1481,7 +1481,7 @@ class NewsAgent:
 # ═══════════════════════════════════════════
 class DocumentAgent:
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY", "")
+        api_key = os.getenv("GEMINI_API_KEY_STOCK", os.getenv("GEMINI_API_KEY", ""))
         self.available = bool(api_key)
         self.client = None
         if self.available:
@@ -1548,7 +1548,7 @@ class ReasoningAgent:
     MODELS = ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile", "llama3-70b-8192"]
 
     def __init__(self):
-        api_key = os.getenv("GROQ_API_KEY", "")
+        api_key = os.getenv("GROQ_API_KEY_STOCK", os.getenv("GROQ_API_KEY", ""))
         self.available = bool(api_key)
         self.client = None
         if self.available:
@@ -1562,7 +1562,7 @@ class ReasoningAgent:
 
     def _call(self, system, user, max_tokens=6000):
         if not self.available:
-            return "⚠ Chưa cấu hình GROQ_API_KEY. Vào Render → Environment → thêm GROQ_API_KEY."
+            return "⚠ Chưa cấu hình GROQ_API_KEY_STOCK. Vào Render → Environment → kiểm tra key."
         for model in self.MODELS:
             try:
                 r = self.client.chat.completions.create(
