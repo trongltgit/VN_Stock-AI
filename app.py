@@ -1,32 +1,1434 @@
 """
 VN Stock AI - Multi-Agent Financial Analysis System
-Backend: Flask + Groq (DeepSeek-R1) + Gemini + DuckDuckGo
-Hoàn toàn miễn phí
+Flask serves HTML inline (no template folder needed)
 """
 
-import os
-import uuid
-import json
-import tempfile
-import logging
+import os, uuid, tempfile, logging
 from pathlib import Path
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__, template_folder='../frontend/templates', static_folder='../frontend/static')
+app = Flask(__name__)
 CORS(app)
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TEMP_DIR = Path(tempfile.gettempdir()) / "vnstock_ai"
 TEMP_DIR.mkdir(exist_ok=True)
 
+# ── HTML embedded ──
+INDEX_HTML = """<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VN Stock AI — Phân Tích Chứng Khoán Chuyên Sâu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:        #060b14;
+  --bg2:       #0c1421;
+  --bg3:       #111d2e;
+  --border:    #1e3050;
+  --border2:   #2a4570;
+  --accent:    #00d4ff;
+  --accent2:   #0099cc;
+  --gold:      #f0c040;
+  --green:     #00e676;
+  --red:       #ff5252;
+  --yellow:    #ffd740;
+  --text:      #e8f4fd;
+  --text2:     #8baabb;
+  --text3:     #4a6b88;
+  --card-bg:   rgba(12,20,33,0.95);
+  --glow:      0 0 30px rgba(0,212,255,0.15);
+  --glow2:     0 0 60px rgba(0,212,255,0.08);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── BACKGROUND GRID ── */
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ── SCANLINE OVERLAY ── */
+body::after {
+  content:'';
+  position:fixed;
+  inset:0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ── HEADER ── */
+header {
+  position: relative;
+  z-index:10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  height: 64px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(6,11,20,0.95);
+  backdrop-filter: blur(12px);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 0 16px rgba(0,212,255,0.4);
+}
+
+.logo-text {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.logo-text span { color: var(--accent); }
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-size: 0.75rem;
+  font-family: 'Space Mono', monospace;
+  color: var(--text3);
+}
+
+.status-dot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: blink 2s infinite;
+}
+
+@keyframes blink {
+  0%,100%{opacity:1;} 50%{opacity:0.3;}
+}
+
+/* ── TICKER TAPE ── */
+.ticker-wrap {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 0;
+  overflow: hidden;
+  position: relative;
+  z-index: 9;
+}
+
+.ticker {
+  display: flex;
+  gap: 3rem;
+  animation: scroll-ticker 40s linear infinite;
+  white-space: nowrap;
+}
+
+@keyframes scroll-ticker {
+  0%{transform:translateX(0);}
+  100%{transform:translateX(-50%);}
+}
+
+.tick-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+}
+
+.tick-sym { color: var(--accent); font-weight: 700; }
+.tick-val { color: var(--text); }
+.tick-up  { color: var(--green); }
+.tick-dn  { color: var(--red); }
+
+/* ── MAIN LAYOUT ── */
+main {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  border-color: var(--border2);
+  box-shadow: var(--glow);
+}
+
+.card::before {
+  content:'';
+  position:absolute;
+  top:0; left:0; right:0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.5;
+}
+
+.card-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── TABS ── */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  flex: 1;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text2);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.tab.active {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.tab:hover:not(.active) {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* ── FORM ELEMENTS ── */
+.form-group {
+  margin-bottom: 0.85rem;
+}
+
+label {
+  display: block;
+  font-size: 0.7rem;
+  font-family: 'Space Mono', monospace;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 5px;
+}
+
+input[type="text"], input[type="url"], select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input[type="text"]:focus, input[type="url"]:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+}
+
+input::placeholder { color: var(--text3); }
+
+.input-group {
+  display: flex;
+  gap: 6px;
+}
+
+.input-group input { flex:1; }
+
+.tag-btn {
+  padding: 9px 10px;
+  background: var(--border);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-family: 'Space Mono', monospace;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.tag-btn:hover { background: var(--border2); }
+
+/* ── URL INPUTS ── */
+.url-list { display: flex; flex-direction: column; gap: 6px; }
+
+.url-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.url-item input { flex:1; font-size: 0.72rem; }
+
+.url-del {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--red);
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: background 0.2s;
+}
+
+.url-del:hover { background: rgba(255,82,82,0.1); }
+
+.add-url-btn {
+  width: 100%;
+  padding: 7px;
+  background: none;
+  border: 1px dashed var(--border2);
+  border-radius: 8px;
+  color: var(--text3);
+  font-size: 0.72rem;
+  font-family: 'Space Mono', monospace;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: all 0.2s;
+}
+
+.add-url-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── FILE UPLOAD ── */
+.upload-zone {
+  border: 1px dashed var(--border2);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--accent);
+  background: rgba(0,212,255,0.03);
+}
+
+.upload-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.upload-zone .upload-icon { font-size: 1.5rem; margin-bottom: 4px; }
+.upload-zone p { font-size: 0.72rem; color: var(--text3); }
+.upload-zone span { color: var(--accent); }
+
+.file-list { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+
+.file-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.7rem;
+  font-family: 'Space Mono', monospace;
+  color: var(--accent);
+}
+
+.file-chip button {
+  background: none;
+  border: none;
+  color: var(--red);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+/* ── ANALYZE BUTTON ── */
+.btn-analyze {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none;
+  border-radius: 10px;
+  color: var(--bg);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 20px rgba(0,212,255,0.3);
+}
+
+.btn-analyze:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 28px rgba(0,212,255,0.45);
+}
+
+.btn-analyze:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── QUICK SYMBOLS ── */
+.quick-symbols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.sym-chip {
+  padding: 4px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-family: 'Space Mono', monospace;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sym-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0,212,255,0.05);
+}
+
+/* ── CONTENT AREA ── */
+.content-area {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 600px;
+}
+
+/* ── WELCOME STATE ── */
+.welcome-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+  text-align: center;
+  gap: 1.5rem;
+}
+
+.welcome-logo {
+  font-size: 3rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-10px);}
+}
+
+.welcome-state h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.welcome-state p { color: var(--text2); font-size: 0.9rem; max-width: 400px; }
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  width: 100%;
+  max-width: 600px;
+}
+
+.feature-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.feature-card .fi { font-size: 1.5rem; margin-bottom: 6px; }
+.feature-card h4 { font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+.feature-card p { font-size: 0.68rem; color: var(--text3); }
+
+/* ── LOADING STATE ── */
+.loading-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+  gap: 2rem;
+}
+
+.loading-state.active { display: flex; }
+
+.spinner-container { position: relative; }
+
+.spinner-ring {
+  width: 80px;
+  height: 80px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.spinner-inner {
+  position: absolute;
+  inset: 10px;
+  border: 2px solid var(--border);
+  border-bottom-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite reverse;
+}
+
+.loading-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 360px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-family: 'Space Mono', monospace;
+  color: var(--text3);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  transition: all 0.3s;
+}
+
+.step.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(0,212,255,0.05);
+}
+
+.step.done {
+  color: var(--green);
+  border-color: var(--green);
+  background: rgba(0,230,118,0.05);
+}
+
+.step-icon { font-size: 1rem; }
+
+/* ── RESULT AREA ── */
+.result-area { display: none; flex-direction: column; gap: 1rem; }
+.result-area.active { display: flex; }
+
+/* ── RESULT HEADER ── */
+.result-header {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.result-header::before {
+  content:'';
+  position:absolute;
+  top:0; left:0; right:0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  border-radius: 12px 12px 0 0;
+}
+
+.result-header { position: relative; }
+
+.sym-display {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sym-code {
+  font-family: 'Syne', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+
+.sym-meta { display: flex; flex-direction: column; gap: 2px; }
+.sym-type {
+  font-size: 0.65rem;
+  font-family: 'Space Mono', monospace;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.sym-time { font-size: 0.7rem; color: var(--text3); font-family: 'Space Mono', monospace; }
+
+.rec-badge {
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rec-BUY   { background: rgba(0,230,118,0.15); border: 2px solid var(--green); color: var(--green); }
+.rec-SELL  { background: rgba(255,82,82,0.15);  border: 2px solid var(--red);   color: var(--red); }
+.rec-HOLD  { background: rgba(240,192,64,0.15); border: 2px solid var(--gold);  color: var(--gold); }
+.rec-WATCH { background: rgba(0,212,255,0.1);   border: 2px solid var(--accent);color: var(--accent); }
+
+/* ── AGENT BADGES ── */
+.agent-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.agent-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-family: 'Space Mono', monospace;
+  border: 1px solid;
+}
+
+.agent-badge.ok    { border-color: var(--green); color: var(--green); background: rgba(0,230,118,0.05); }
+.agent-badge.warn  { border-color: var(--yellow); color: var(--yellow); background: rgba(255,215,64,0.05); }
+
+/* ── ANALYSIS CONTENT ── */
+.analysis-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.analysis-card-header {
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0,0,0,0.2);
+}
+
+.analysis-card-header h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analysis-body {
+  padding: 1.5rem;
+  line-height: 1.8;
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
+/* ── MARKDOWN-LIKE STYLING for AI output ── */
+.analysis-body h1, .analysis-body h2, .analysis-body h3 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 1.2rem 0 0.5rem;
+}
+
+.analysis-body h2 { font-size: 1rem; color: var(--gold); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.analysis-body h3 { font-size: 0.9rem; color: var(--accent); }
+
+.analysis-body strong { color: var(--text); font-weight: 600; }
+.analysis-body em { color: var(--text2); font-style: italic; }
+
+.analysis-body ul, .analysis-body ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.analysis-body li { margin-bottom: 4px; }
+
+.analysis-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
+}
+
+.analysis-body blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 8px 16px;
+  background: rgba(0,212,255,0.05);
+  border-radius: 0 8px 8px 0;
+  margin: 0.8rem 0;
+  color: var(--text2);
+}
+
+/* ── COPY BTN ── */
+.copy-btn {
+  padding: 5px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  font-size: 0.68rem;
+  font-family: 'Space Mono', monospace;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── CHART PLACEHOLDER ── */
+.chart-placeholder {
+  background: var(--bg2);
+  border: 1px dashed var(--border2);
+  border-radius: 8px;
+  padding: 3rem;
+  text-align: center;
+  color: var(--text3);
+  font-size: 0.78rem;
+  font-family: 'Space Mono', monospace;
+}
+
+/* ── ERROR STATE ── */
+.error-box {
+  background: rgba(255,82,82,0.08);
+  border: 1px solid var(--red);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  color: var(--red);
+  font-size: 0.82rem;
+  display: none;
+}
+
+.error-box.active { display: block; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  main { grid-template-columns: 1fr; }
+  .feature-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 540px) {
+  header { padding: 0 1rem; }
+  main { padding: 1rem; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .sym-code { font-size: 1.4rem; }
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── TOOLTIP ── */
+.tooltip {
+  position: relative;
+}
+.tooltip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.65rem;
+  font-family: 'Space Mono', monospace;
+  color: var(--text2);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 100;
+}
+.tooltip:hover::after { opacity: 1; }
+
+/* ── FOREX DIRECTION ── */
+.dir-UP       { color: var(--green); }
+.dir-DOWN     { color: var(--red); }
+.dir-SIDEWAYS { color: var(--yellow); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">📈</div>
+    <div>
+      <div class="logo-text">VN<span>Stock</span>AI</div>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="status-dot">
+      <div class="dot"></div>
+      <span id="systemStatus">Đang kết nối...</span>
+    </div>
+    <span id="currentTime" style="color:var(--text2)"></span>
+  </div>
+</header>
+
+<!-- TICKER TAPE -->
+<div class="ticker-wrap">
+  <div class="ticker" id="tickerTape">
+    <span class="tick-item"><span class="tick-sym">VN-INDEX</span><span class="tick-val">1,287.45</span><span class="tick-up">▲ +12.3 (+0.97%)</span></span>
+    <span class="tick-item"><span class="tick-sym">VCB</span><span class="tick-val">86,500</span><span class="tick-up">▲ +500</span></span>
+    <span class="tick-item"><span class="tick-sym">VHM</span><span class="tick-val">38,200</span><span class="tick-dn">▼ -300</span></span>
+    <span class="tick-item"><span class="tick-sym">HPG</span><span class="tick-val">23,100</span><span class="tick-up">▲ +200</span></span>
+    <span class="tick-item"><span class="tick-sym">MAFPF1</span><span class="tick-val">12,540</span><span class="tick-up">▲ +85</span></span>
+    <span class="tick-item"><span class="tick-sym">USD/VND</span><span class="tick-val">25,480</span><span class="tick-dn">▼ -20</span></span>
+    <span class="tick-item"><span class="tick-sym">VIC</span><span class="tick-val">41,500</span><span class="tick-up">▲ +350</span></span>
+    <span class="tick-item"><span class="tick-sym">MBB</span><span class="tick-val">19,800</span><span class="tick-dn">▼ -150</span></span>
+    <span class="tick-item"><span class="tick-sym">FPT</span><span class="tick-val">113,600</span><span class="tick-up">▲ +1,200</span></span>
+    <span class="tick-item"><span class="tick-sym">TCB</span><span class="tick-val">22,400</span><span class="tick-up">▲ +100</span></span>
+    <!-- Duplicate for seamless loop -->
+    <span class="tick-item"><span class="tick-sym">VN-INDEX</span><span class="tick-val">1,287.45</span><span class="tick-up">▲ +12.3 (+0.97%)</span></span>
+    <span class="tick-item"><span class="tick-sym">VCB</span><span class="tick-val">86,500</span><span class="tick-up">▲ +500</span></span>
+    <span class="tick-item"><span class="tick-sym">VHM</span><span class="tick-val">38,200</span><span class="tick-dn">▼ -300</span></span>
+    <span class="tick-item"><span class="tick-sym">HPG</span><span class="tick-val">23,100</span><span class="tick-up">▲ +200</span></span>
+    <span class="tick-item"><span class="tick-sym">MAFPF1</span><span class="tick-val">12,540</span><span class="tick-up">▲ +85</span></span>
+    <span class="tick-item"><span class="tick-sym">USD/VND</span><span class="tick-val">25,480</span><span class="tick-dn">▼ -20</span></span>
+    <span class="tick-item"><span class="tick-sym">VIC</span><span class="tick-val">41,500</span><span class="tick-up">▲ +350</span></span>
+    <span class="tick-item"><span class="tick-sym">MBB</span><span class="tick-val">19,800</span><span class="tick-dn">▼ -150</span></span>
+    <span class="tick-item"><span class="tick-sym">FPT</span><span class="tick-val">113,600</span><span class="tick-up">▲ +1,200</span></span>
+    <span class="tick-item"><span class="tick-sym">TCB</span><span class="tick-val">22,400</span><span class="tick-up">▲ +100</span></span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<main>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- INPUT CARD -->
+    <div class="card">
+      <div class="card-title">⚙ Cấu Hình Phân Tích</div>
+
+      <!-- TABS: Stock / Fund / Forex -->
+      <div class="tabs">
+        <button class="tab active" data-mode="stock" onclick="setMode('stock',this)">📊 Cổ phiếu</button>
+        <button class="tab" data-mode="fund"  onclick="setMode('fund',this)">🏦 Quỹ</button>
+        <button class="tab" data-mode="forex" onclick="setMode('forex',this)">💱 Ngoại tệ</button>
+      </div>
+
+      <!-- SYMBOL INPUT -->
+      <div class="form-group">
+        <label id="symbolLabel">🔤 Mã Chứng Khoán</label>
+        <div class="input-group">
+          <input type="text" id="symbolInput" placeholder="VD: VCB, HPG, FPT..." style="text-transform:uppercase"/>
+          <button class="tag-btn" onclick="analyzeNow()">▶ Run</button>
+        </div>
+        <div class="quick-symbols" id="quickSymbols">
+          <span class="sym-chip" onclick="fillSym('VCB')">VCB</span>
+          <span class="sym-chip" onclick="fillSym('VHM')">VHM</span>
+          <span class="sym-chip" onclick="fillSym('HPG')">HPG</span>
+          <span class="sym-chip" onclick="fillSym('FPT')">FPT</span>
+          <span class="sym-chip" onclick="fillSym('TCB')">TCB</span>
+          <span class="sym-chip" onclick="fillSym('MBB')">MBB</span>
+        </div>
+      </div>
+
+      <!-- URL SOURCES -->
+      <div class="form-group" id="urlSection">
+        <label>🔗 Nguồn Dữ Liệu URL (Tùy chọn)</label>
+        <div class="url-list" id="urlList">
+          <div class="url-item">
+            <input type="url" placeholder="https://quotes.vcbs.com.vn/k8/"/>
+            <button class="url-del" onclick="removeUrl(this)">✕</button>
+          </div>
+          <div class="url-item">
+            <input type="url" placeholder="https://www.vcbf.com/"/>
+            <button class="url-del" onclick="removeUrl(this)">✕</button>
+          </div>
+        </div>
+        <button class="add-url-btn" onclick="addUrlInput()">＋ Thêm URL</button>
+      </div>
+
+      <!-- PDF UPLOAD (only for stock/fund) -->
+      <div class="form-group" id="uploadSection">
+        <label>📄 Upload Báo Cáo Tài Chính (PDF)</label>
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="pdfInput" multiple accept=".pdf" onchange="handleFiles(this.files)"/>
+          <div class="upload-icon">📂</div>
+          <p><span>Chọn file</span> hoặc kéo thả vào đây</p>
+          <p style="margin-top:4px;font-size:0.65rem;">Hỗ trợ: .pdf (tối đa 5 files)</p>
+        </div>
+        <div class="file-list" id="fileList"></div>
+      </div>
+
+      <!-- ANALYZE BUTTON -->
+      <button class="btn-analyze" id="analyzeBtn" onclick="analyzeNow()">
+        <span>🤖</span> Phân Tích AI Chuyên Sâu
+      </button>
+    </div>
+
+    <!-- AGENT STATUS CARD -->
+    <div class="card">
+      <div class="card-title">🧬 Trạng Thái AI Agents</div>
+      <div style="display:flex;flex-direction:column;gap:8px;" id="agentStatus">
+        <div class="step" id="ag1">
+          <span class="step-icon">🔍</span>
+          <div>
+            <div style="font-size:0.72rem;color:var(--text2)">Agent 1: News Collector</div>
+            <div style="font-size:0.65rem;color:var(--text3)">DuckDuckGo Search</div>
+          </div>
+        </div>
+        <div class="step" id="ag2">
+          <span class="step-icon">📖</span>
+          <div>
+            <div style="font-size:0.72rem;color:var(--text2)">Agent 2: Doc Analyzer</div>
+            <div style="font-size:0.65rem;color:var(--text3)">Gemini 1.5 Flash (Free)</div>
+          </div>
+        </div>
+        <div class="step" id="ag3">
+          <span class="step-icon">🧠</span>
+          <div>
+            <div style="font-size:0.72rem;color:var(--text2)">Agent 3: Reasoning</div>
+            <div style="font-size:0.65rem;color:var(--text3)">DeepSeek-R1 via Groq (Free)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API CONFIG HINT -->
+    <div class="card" style="border-color:rgba(240,192,64,0.3)">
+      <div class="card-title" style="color:var(--gold)">🔑 Cấu Hình API Keys</div>
+      <p style="font-size:0.72rem;color:var(--text3);line-height:1.7;">
+        Thêm vào file <code style="color:var(--accent)">.env</code> trên server:<br/>
+        <code style="color:var(--green)">GROQ_API_KEY</code> → <a href="https://console.groq.com" target="_blank" style="color:var(--accent)">console.groq.com</a><br/>
+        <code style="color:var(--green)">GEMINI_API_KEY</code> → <a href="https://aistudio.google.com" target="_blank" style="color:var(--accent)">aistudio.google.com</a><br/>
+        <br/>
+        <span style="color:var(--yellow)">⚡ Cả hai đều hoàn toàn miễn phí!</span>
+      </p>
+    </div>
+
+  </aside>
+
+  <!-- CONTENT AREA -->
+  <div class="content-area">
+
+    <!-- WELCOME -->
+    <div class="welcome-state" id="welcomeState">
+      <div class="welcome-logo">📊</div>
+      <h2>Phân Tích Chứng Khoán AI</h2>
+      <p>Hệ thống multi-agent phân tích chuyên sâu cổ phiếu, chứng chỉ quỹ và tỷ giá ngoại tệ cho thị trường Việt Nam</p>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="fi">🔍</div>
+          <h4>Tin Tức Thị Trường</h4>
+          <p>DuckDuckGo quét tin tức vĩ mô real-time</p>
+        </div>
+        <div class="feature-card">
+          <div class="fi">📄</div>
+          <h4>Đọc Báo Cáo PDF</h4>
+          <p>Gemini 1.5 Flash phân tích BCTC chuyên sâu</p>
+        </div>
+        <div class="feature-card">
+          <div class="fi">🧠</div>
+          <h4>Suy Luận Định Giá</h4>
+          <p>DeepSeek-R1 đưa ra khuyến nghị MUA/BÁN/GIỮ</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOADING -->
+    <div class="loading-state" id="loadingState">
+      <div class="spinner-container">
+        <div class="spinner-ring"></div>
+        <div class="spinner-inner"></div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--accent)" id="loadingSymbol">Đang phân tích...</div>
+        <div style="font-size:0.75rem;color:var(--text3);margin-top:4px;font-family:'Space Mono',monospace">Multi-Agent AI Processing</div>
+      </div>
+      <div class="loading-steps">
+        <div class="step" id="step1"><span class="step-icon">🔍</span> Thu thập tin tức thị trường...</div>
+        <div class="step" id="step2"><span class="step-icon">📖</span> Phân tích tài liệu tài chính...</div>
+        <div class="step" id="step3"><span class="step-icon">🧠</span> Suy luận & định giá chuyên sâu...</div>
+        <div class="step" id="step4"><span class="step-icon">📝</span> Tổng hợp báo cáo...</div>
+      </div>
+    </div>
+
+    <!-- ERROR -->
+    <div class="error-box" id="errorBox"></div>
+
+    <!-- RESULT -->
+    <div class="result-area" id="resultArea">
+
+      <!-- Result Header -->
+      <div class="result-header" id="resultHeader">
+        <div class="sym-display">
+          <div class="sym-code" id="resultSym">--</div>
+          <div class="sym-meta">
+            <div class="sym-type" id="resultType">--</div>
+            <div class="sym-time" id="resultTime">--</div>
+          </div>
+        </div>
+        <div class="rec-badge" id="recBadge">—</div>
+      </div>
+
+      <!-- Agent summary row -->
+      <div class="agent-row" id="agentRow"></div>
+
+      <!-- Analysis Content -->
+      <div class="analysis-card">
+        <div class="analysis-card-header">
+          <h3>📋 Báo Cáo Phân Tích Toàn Diện</h3>
+          <button class="copy-btn" onclick="copyAnalysis()">📋 Sao chép</button>
+        </div>
+        <div class="analysis-body" id="analysisBody">
+          <!-- AI output here -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script>
+// ── CONFIG ──
+const API_BASE = window.location.origin; // same origin (Flask serves this)
+let currentMode = 'stock';
+let uploadedFiles = [];
+
+// ── TIME ──
+function updateTime() {
+  const now = new Date();
+  document.getElementById('currentTime').textContent =
+    now.toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(updateTime, 1000);
+updateTime();
+
+// ── HEALTH CHECK ──
+async function checkHealth() {
+  try {
+    const r = await fetch(`${API_BASE}/health`);
+    const d = await r.json();
+    if (d.status === 'ok') {
+      document.getElementById('systemStatus').textContent = 'Hệ thống hoạt động';
+      document.getElementById('systemStatus').style.color = 'var(--green)';
+      // Update agent status
+      if (d.agents.news)      markAgent('ag1','done');
+      if (d.agents.document)  markAgent('ag2','done');
+      if (d.agents.reasoning) markAgent('ag3','done');
+    }
+  } catch(e) {
+    document.getElementById('systemStatus').textContent = 'Chưa kết nối backend';
+    document.getElementById('systemStatus').style.color = 'var(--yellow)';
+  }
+}
+checkHealth();
+
+function markAgent(id, state) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('active','done');
+  if (state) el.classList.add(state);
+}
+
+// ── MODE ──
+const modeConfig = {
+  stock: {
+    label: '🔤 Mã Cổ Phiếu',
+    placeholder: 'VD: VCB, HPG, FPT...',
+    chips: ['VCB','VHM','HPG','FPT','TCB','MBB'],
+    showUpload: true,
+    showUrl: true
+  },
+  fund: {
+    label: '🔤 Mã Chứng Chỉ Quỹ',
+    placeholder: 'VD: MAFPF1, VFMVSF, SSISCA...',
+    chips: ['MAFPF1','VFMVSF','SSISCA','FVBF','DCDS'],
+    showUpload: true,
+    showUrl: true
+  },
+  forex: {
+    label: '💱 Cặp Tiền Tệ',
+    placeholder: 'VD: USD.VND, EUR.USD, USD.JPY...',
+    chips: ['USD.VND','EUR.USD','EUR.VND','USD.JPY','GBP.USD'],
+    showUpload: false,
+    showUrl: false
+  }
+};
+
+function setMode(mode, btn) {
+  currentMode = mode;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const cfg = modeConfig[mode];
+  document.getElementById('symbolLabel').textContent = cfg.label;
+  document.getElementById('symbolInput').placeholder = cfg.placeholder;
+  document.getElementById('symbolInput').value = '';
+  // Quick chips
+  const qsEl = document.getElementById('quickSymbols');
+  qsEl.innerHTML = cfg.chips.map(c => `<span class="sym-chip" onclick="fillSym('${c}')">${c}</span>`).join('');
+  // Show/hide sections
+  document.getElementById('uploadSection').style.display = cfg.showUpload ? '' : 'none';
+  document.getElementById('urlSection').style.display   = cfg.showUrl    ? '' : 'none';
+}
+
+function fillSym(sym) {
+  document.getElementById('symbolInput').value = sym;
+}
+
+// ── URL MANAGEMENT ──
+function addUrlInput() {
+  const list = document.getElementById('urlList');
+  const div = document.createElement('div');
+  div.className = 'url-item';
+  div.innerHTML = `<input type="url" placeholder="https://..."/><button class="url-del" onclick="removeUrl(this)">✕</button>`;
+  list.appendChild(div);
+}
+
+function removeUrl(btn) {
+  btn.parentElement.remove();
+}
+
+// ── FILE HANDLING ──
+function handleFiles(files) {
+  Array.from(files).forEach(f => {
+    if (f.type === 'application/pdf' && uploadedFiles.length < 5) {
+      uploadedFiles.push(f);
+    }
+  });
+  renderFileList();
+}
+
+function renderFileList() {
+  const fl = document.getElementById('fileList');
+  fl.innerHTML = uploadedFiles.map((f, i) => `
+    <div class="file-chip">
+      <span>📄 ${f.name.substring(0,30)}${f.name.length>30?'...':''}</span>
+      <button onclick="removeFile(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeFile(i) {
+  uploadedFiles.splice(i, 1);
+  renderFileList();
+}
+
+// ── DRAG & DROP ──
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+});
+
+// ── LOADING ANIMATION ──
+let stepTimer = null;
+function startLoadingSteps() {
+  ['step1','step2','step3','step4'].forEach(s => {
+    const el = document.getElementById(s);
+    if(el){ el.classList.remove('active','done'); }
+  });
+  let i = 0;
+  const steps = ['step1','step2','step3','step4'];
+  stepTimer = setInterval(() => {
+    if (i > 0) {
+      const prev = document.getElementById(steps[i-1]);
+      if(prev){ prev.classList.remove('active'); prev.classList.add('done'); }
+    }
+    if (i < steps.length) {
+      const cur = document.getElementById(steps[i]);
+      if(cur){ cur.classList.add('active'); }
+      i++;
+    } else {
+      clearInterval(stepTimer);
+    }
+  }, 1800);
+}
+
+// ── ANALYZE ──
+async function analyzeNow() {
+  const sym = document.getElementById('symbolInput').value.trim().toUpperCase();
+  if (!sym) {
+    alert('Vui lòng nhập mã chứng khoán hoặc cặp tiền tệ');
+    return;
+  }
+
+  // Hide others, show loading
+  document.getElementById('welcomeState').style.display = 'none';
+  document.getElementById('resultArea').classList.remove('active');
+  document.getElementById('errorBox').classList.remove('active');
+  document.getElementById('loadingState').classList.add('active');
+  document.getElementById('loadingSymbol').textContent = `Đang phân tích ${sym}...`;
+  document.getElementById('analyzeBtn').disabled = true;
+
+  startLoadingSteps();
+
+  const formData = new FormData();
+  formData.append('symbol', sym);
+  formData.append('type', currentMode);
+
+  // URLs
+  const urlInputs = document.querySelectorAll('#urlList input[type="url"]');
+  const urls = Array.from(urlInputs).map(i => i.value.trim()).filter(Boolean);
+  formData.append('urls', JSON.stringify(urls));
+
+  // PDFs
+  uploadedFiles.forEach(f => formData.append('pdfs', f));
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/analyze`, {
+      method: 'POST',
+      body: formData
+    });
+
+    clearInterval(stepTimer);
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.error || 'Lỗi server');
+    }
+
+    const json = await resp.json();
+    renderResult(json, sym);
+
+  } catch(e) {
+    clearInterval(stepTimer);
+    document.getElementById('loadingState').classList.remove('active');
+    const eb = document.getElementById('errorBox');
+    eb.textContent = `⚠ Lỗi: ${e.message}`;
+    eb.classList.add('active');
+  } finally {
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+}
+
+// ── ENTER KEY ──
+document.getElementById('symbolInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') analyzeNow();
+});
+
+// ── RENDER RESULT ──
+function renderResult(json, sym) {
+  document.getElementById('loadingState').classList.remove('active');
+
+  const data = json.data;
+  const mode = json.mode;
+
+  // Header
+  document.getElementById('resultSym').textContent = sym;
+
+  const typeMap = {
+    stock: 'Cổ Phiếu | HOSE/HNX',
+    fund:  'Chứng Chỉ Quỹ',
+    forex: 'Cặp Tiền Tệ'
+  };
+  document.getElementById('resultType').textContent = typeMap[currentMode] || currentMode;
+  document.getElementById('resultTime').textContent =
+    'Phân tích lúc: ' + new Date().toLocaleString('vi-VN');
+
+  // Recommendation badge
+  const badge = document.getElementById('recBadge');
+  if (mode === 'forex') {
+    const dir = data.direction || 'SIDEWAYS';
+    const dirMap = { UP: '▲ TĂNG', DOWN: '▼ GIẢM', SIDEWAYS: '↔ ĐI NGANG' };
+    badge.textContent = dirMap[dir] || dir;
+    badge.className = `rec-badge dir-${dir}`;
+  } else {
+    const rec = data.recommendation || 'WATCH';
+    const recMap = { BUY:'🟢 MUA', SELL:'🔴 BÁN', HOLD:'🟡 GIỮ', WATCH:'🔵 THEO DÕI' };
+    badge.textContent = recMap[rec] || rec;
+    badge.className = `rec-badge rec-${rec}`;
+  }
+
+  // Agent row
+  const agRow = document.getElementById('agentRow');
+  agRow.innerHTML = `
+    <div class="agent-badge ok">🔍 DuckDuckGo: ${data.news_count||0} tin tức</div>
+    <div class="agent-badge ${data.has_documents ? 'ok' : 'warn'}">📖 Gemini: ${data.has_documents ? 'Đã đọc PDF' : 'Không có PDF'}</div>
+    <div class="agent-badge ok">🧠 DeepSeek-R1: Hoàn thành</div>
+  `;
+
+  // Analysis body — render markdown-ish
+  const body = data.analysis || data.summary || 'Không có dữ liệu phân tích';
+  document.getElementById('analysisBody').innerHTML = markdownToHtml(body);
+
+  // Show result
+  document.getElementById('resultArea').classList.add('active');
+
+  // All steps done
+  ['step1','step2','step3','step4'].forEach(s => {
+    const el = document.getElementById(s);
+    if(el){ el.classList.remove('active'); el.classList.add('done'); }
+  });
+}
+
+// ── SIMPLE MARKDOWN RENDERER ──
+function markdownToHtml(text) {
+  if (!text) return '';
+  return text
+    // Remove DeepSeek <think> tags
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    // Bold
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Italic
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // H2
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    // H3
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    // H1
+    .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+    // HR
+    .replace(/^---+$/gm, '<hr/>')
+    // Bullet list
+    .replace(/^[•\-\*] (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>(\n|$))+/g, m => `<ul>${m}</ul>`)
+    // Numbered list
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    // Blockquote
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    // Line breaks
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br/>')
+    // Wrap in p
+    .replace(/^(?!<[houlbp])(.+)$/gm, (m) => m.startsWith('<') ? m : `<p>${m}</p>`);
+}
+
+// ── COPY ANALYSIS ──
+function copyAnalysis() {
+  const text = document.getElementById('analysisBody').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✅ Đã sao chép';
+    setTimeout(() => btn.textContent = '📋 Sao chép', 2000);
+  });
+}
+</script>
+</body>
+</html>
+"""
+
 # ─────────────────────────────────────────────
-# AGENT 1: NEWS COLLECTOR (DuckDuckGo - Free)
+# AGENT 1: NEWS COLLECTOR (DuckDuckGo)
 # ─────────────────────────────────────────────
 class NewsAgent:
     def __init__(self):
@@ -37,32 +1439,26 @@ class NewsAgent:
             logger.warning(f"DuckDuckGo not available: {e}")
             self.available = False
 
-    def search(self, query: str, max_results: int = 8) -> list:
+    def search(self, query, max_results=8):
         if not self.available:
             return []
         try:
             from duckduckgo_search import DDGS
             with DDGS() as ddgs:
-                results = list(ddgs.text(
-                    query + " 2025",
-                    region="vn-vi",
-                    max_results=max_results
-                ))
-            return results
+                return list(ddgs.text(query + " 2025", region="vn-vi", max_results=max_results))
         except Exception as e:
-            logger.error(f"DuckDuckGo search error: {e}")
+            logger.error(f"DDG error: {e}")
             return []
 
-    def search_market_news(self, symbol: str) -> list:
+    def search_market_news(self, symbol):
         return self.search(f"{symbol} chứng khoán tài chính Việt Nam")
 
-    def search_forex_news(self, pair: str) -> list:
+    def search_forex_news(self, pair):
         return self.search(f"tỷ giá {pair} phân tích kỹ thuật")
 
 
 # ─────────────────────────────────────────────
-# AGENT 2: DOCUMENT READER (Gemini - Free)
-# Uses new google-genai SDK (compatible with Python 3.14)
+# AGENT 2: DOCUMENT READER (Gemini google-genai)
 # ─────────────────────────────────────────────
 class DocumentAgent:
     def __init__(self):
@@ -74,68 +1470,38 @@ class DocumentAgent:
                 from google import genai
                 self.client = genai.Client(api_key=api_key)
                 self.model_id = "gemini-2.0-flash"
-                logger.info("Gemini DocumentAgent initialized (google-genai SDK)")
+                logger.info("Gemini OK")
             except Exception as e:
                 logger.error(f"Gemini init error: {e}")
                 self.available = False
 
-    def extract_pdf_text(self, pdf_path: str) -> str:
+    def extract_pdf_text(self, pdf_path):
         try:
             import pdfplumber
             text = ""
             with pdfplumber.open(pdf_path) as pdf:
                 for page in pdf.pages:
-                    page_text = page.extract_text()
-                    if page_text:
-                        text += page_text + "\n"
+                    t = page.extract_text()
+                    if t: text += t + "\n"
             return text[:50000]
         except Exception as e:
-            logger.error(f"PDF extraction error: {e}")
+            logger.error(f"PDF error: {e}")
             return ""
 
-    def analyze_document(self, text: str, symbol: str) -> dict:
+    def analyze_document(self, text, symbol):
         if not self.available or not text:
             return {"summary": "Không có dữ liệu tài liệu", "key_metrics": {}}
         try:
-            prompt = f"""Bạn là chuyên gia phân tích tài chính. Phân tích tài liệu sau về mã {symbol}.
-Trích xuất và tóm tắt:
-1. Doanh thu, lợi nhuận, EPS, P/E, ROE, ROA, Debt/Equity
-2. Tăng trưởng so với kỳ trước
-3. Điểm mạnh và rủi ro chính
-4. Nhận xét sức khỏe tài chính
-
-Tài liệu:
-{text[:20000]}
-
-Trả lời bằng tiếng Việt, chuyên nghiệp, súc tích."""
-            response = self.client.models.generate_content(
-                model=self.model_id,
-                contents=prompt
-            )
-            summary = response.text
-            return {"summary": summary, "key_metrics": self._extract_metrics(summary)}
+            prompt = f"""Phân tích tài chính {symbol}. Trích xuất: doanh thu, lợi nhuận, EPS, P/E, ROE, ROA, nợ, tăng trưởng, điểm mạnh/yếu/rủi ro. Tiếng Việt, chuyên nghiệp.\n\nTài liệu:\n{text[:20000]}"""
+            resp = self.client.models.generate_content(model=self.model_id, contents=prompt)
+            return {"summary": resp.text, "key_metrics": {}}
         except Exception as e:
-            logger.error(f"Gemini analysis error: {e}")
-            return {"summary": f"Lỗi phân tích Gemini: {str(e)}", "key_metrics": {}}
-
-    def _extract_metrics(self, text: str) -> dict:
-        import re
-        metrics = {}
-        patterns = {
-            "PE": r"P/E[:\s]*([0-9.]+)",
-            "ROE": r"ROE[:\s]*([0-9.]+)%?",
-            "ROA": r"ROA[:\s]*([0-9.]+)%?",
-            "EPS": r"EPS[:\s]*([0-9,]+)",
-        }
-        for key, pattern in patterns.items():
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                metrics[key] = match.group(1)
-        return metrics
+            logger.error(f"Gemini analyze error: {e}")
+            return {"summary": f"Lỗi Gemini: {e}", "key_metrics": {}}
 
 
 # ─────────────────────────────────────────────
-# AGENT 3: REASONING & VALUATION (Groq/DeepSeek - Free)
+# AGENT 3: REASONING (Groq / DeepSeek-R1)
 # ─────────────────────────────────────────────
 class ReasoningAgent:
     def __init__(self):
@@ -146,155 +1512,83 @@ class ReasoningAgent:
             try:
                 from groq import Groq
                 self.client = Groq(api_key=api_key)
-                logger.info("Groq ReasoningAgent initialized")
+                logger.info("Groq OK")
             except Exception as e:
                 logger.error(f"Groq init error: {e}")
                 self.available = False
 
-    def _call_groq(self, system_prompt: str, user_prompt: str) -> str:
+    def _call(self, system, user):
         if not self.available:
-            return "⚠ Groq API chưa được cấu hình. Vui lòng thêm GROQ_API_KEY vào Environment Variables trên Render."
-        # Try DeepSeek-R1 first, fallback to Llama
+            return "⚠ Groq API chưa được cấu hình. Thêm GROQ_API_KEY vào Environment Variables trên Render."
         for model in ["deepseek-r1-distill-llama-70b", "llama-3.3-70b-versatile"]:
             try:
-                completion = self.client.chat.completions.create(
+                r = self.client.chat.completions.create(
                     model=model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=0.3,
-                    max_tokens=4096,
+                    messages=[{"role":"system","content":system},{"role":"user","content":user}],
+                    temperature=0.3, max_tokens=4096
                 )
-                return completion.choices[0].message.content
+                return r.choices[0].message.content
             except Exception as e:
-                logger.warning(f"Groq model {model} failed: {e}")
-                continue
+                logger.warning(f"Groq {model} failed: {e}")
         return "Lỗi: Không thể kết nối Groq API."
 
-    def analyze_stock(self, symbol: str, news_data: list, doc_analysis: dict, stock_type: str = "stock") -> dict:
-        system_prompt = """Bạn là chuyên gia phân tích chứng khoán hàng đầu Việt Nam với 20 năm kinh nghiệm.
-Nhiệm vụ: Phân tích toàn diện, chuyên sâu và đưa ra khuyến nghị đầu tư cụ thể.
-Phong cách: Chuyên nghiệp, có căn cứ dữ liệu, rõ ràng."""
-
-        news_summary = "\n".join([f"- {n.get('title','')}: {n.get('body','')[:200]}" for n in news_data[:5]])
-        doc_summary = doc_analysis.get("summary", "Không có dữ liệu tài liệu")
+    def analyze_stock(self, symbol, news_data, doc_analysis, stock_type="stock"):
+        news_txt = "\n".join([f"- {n.get('title','')}: {n.get('body','')[:200]}" for n in news_data[:5]])
+        doc_txt = doc_analysis.get("summary","Không có dữ liệu tài liệu")
         label = "chứng chỉ quỹ" if stock_type == "fund" else "cổ phiếu"
+        system = "Bạn là chuyên gia phân tích chứng khoán Việt Nam 20 năm kinh nghiệm. Phân tích toàn diện, chuyên nghiệp."
+        user = f"""Phân tích chuyên sâu {label} **{symbol}**
 
-        user_prompt = f"""Phân tích chuyên sâu {label} **{symbol}**:
+**Tin tức:**
+{news_txt or "Không có"}
 
-## DỮ LIỆU ĐẦU VÀO
-**Tin tức thị trường:**
-{news_summary or 'Không có tin tức'}
-
-**Phân tích tài liệu tài chính:**
-{doc_summary}
+**Tài liệu tài chính:**
+{doc_txt}
 
 ---
-## YÊU CẦU BÁO CÁO
-
+Viết báo cáo đầy đủ theo cấu trúc:
 ### 1. TỔNG QUAN THỊ TRƯỜNG
-- Bối cảnh kinh tế vĩ mô tác động đến {symbol}
-- Tâm lý thị trường, ngành liên quan
+### 2. PHÂN TÍCH CƠ BẢN (tài chính, định giá P/E P/B ROE so ngành)
+### 3. PHÂN TÍCH KỸ THUẬT (xu hướng, hỗ trợ/kháng cự, RSI, MACD)
+### 4. ĐỊNH GIÁ & GIÁ MỤC TIÊU (Fair Value, target 3-6 tháng)
+### 5. KHUYẾN NGHỊ: **[MUA / BÁN / GIỮ / THEO DÕI]** (lý do, điều kiện vào lệnh, stop-loss, % danh mục, thời hạn)
+### 6. RỦI RO & CATALYST
 
-### 2. PHÂN TÍCH CƠ BẢN
-- Sức khỏe tài chính (thanh khoản, nợ, dòng tiền)
-- Hiệu quả hoạt động kinh doanh
-- Định giá so sánh ngành (P/E, P/B, ROE)
+Tiếng Việt, chuyên nghiệp, dùng emoji."""
+        analysis = self._call(system, user)
+        return {"analysis": analysis, "recommendation": self._rec(analysis), "symbol": symbol, "type": stock_type}
 
-### 3. PHÂN TÍCH KỸ THUẬT
-- Xu hướng giá ngắn/trung/dài hạn
-- Mức hỗ trợ và kháng cự quan trọng
-- Tín hiệu RSI, MACD, MA
+    def analyze_forex(self, pair, news_data):
+        news_txt = "\n".join([f"- {n.get('title','')}: {n.get('body','')[:200]}" for n in news_data[:5]])
+        system = "Bạn là chuyên gia phân tích ngoại hối với chuyên môn về thị trường Việt Nam và quốc tế."
+        user = f"""Phân tích cặp tỷ giá **{pair.upper()}**
 
-### 4. PHÂN TÍCH GIÁ & ĐỊNH GIÁ
-- Giá hợp lý (Fair Value) ước tính
-- Vùng giá mục tiêu 3-6 tháng
-- Rủi ro downside
-
-### 5. KHUYẾN NGHỊ ĐẦU TƯ
-**[MUA / BÁN / GIỮ / THEO DÕI]**
-- Lý do cụ thể, điều kiện vào lệnh
-- Stop-loss đề xuất
-- Tỷ lệ phân bổ danh mục (%)
-- Thời hạn nắm giữ
-
-### 6. RỦI RO CẦN THEO DÕI
-- Top 3 rủi ro chính + catalyst sắp tới
-
-Trả lời đầy đủ, chuyên nghiệp bằng tiếng Việt."""
-
-        analysis = self._call_groq(system_prompt, user_prompt)
-        return {
-            "analysis": analysis,
-            "recommendation": self._extract_recommendation(analysis),
-            "symbol": symbol,
-            "type": stock_type
-        }
-
-    def analyze_forex(self, pair: str, news_data: list) -> dict:
-        system_prompt = """Bạn là chuyên gia phân tích ngoại hối (Forex) với chuyên môn sâu về thị trường Việt Nam và quốc tế."""
-
-        news_summary = "\n".join([f"- {n.get('title','')}: {n.get('body','')[:200]}" for n in news_data[:5]])
-        parts = pair.replace(".", "/").upper()
-
-        user_prompt = f"""Phân tích chuyên sâu cặp tỷ giá **{parts}**:
-
-## TIN TỨC LIÊN QUAN
-{news_summary or 'Không có dữ liệu tin tức'}
+**Tin tức:**
+{news_txt or "Không có"}
 
 ---
-### 1. TỔNG QUAN CẶP TIỀN {parts}
-- Đặc điểm và tầm quan trọng
-- Bối cảnh kinh tế hai nước/khu vực
-
-### 2. PHÂN TÍCH CƠ BẢN
-- Chính sách tiền tệ NHTW liên quan
-- Lạm phát, lãi suất, GDP
-- Cán cân thương mại, địa chính trị
-
-### 3. PHÂN TÍCH KỸ THUẬT
-- Xu hướng hiện tại (ngắn/trung/dài hạn)
-- Hỗ trợ và kháng cự chính
-- RSI, MACD, Bollinger Bands
-
-### 4. DỰ BÁO BIẾN ĐỘNG
-- Ngắn hạn (1-4 tuần), trung hạn (1-3 tháng)
-- Vùng mục tiêu tăng/giảm
-
-### 5. TƯ VẤN
-**[TỶ GIÁ DỰ KIẾN TĂNG / GIẢM / ĐI NGANG]**
-- Chiến lược doanh nghiệp xuất/nhập khẩu
-- Chiến lược nhà đầu tư cá nhân
-- Mức chốt lời / cắt lỗ
-
+### 1. TỔNG QUAN CẶP TIỀN
+### 2. PHÂN TÍCH CƠ BẢN (chính sách NHTW, lãi suất, lạm phát, thương mại)
+### 3. PHÂN TÍCH KỸ THUẬT (xu hướng, hỗ trợ/kháng cự, RSI, MACD, Bollinger)
+### 4. DỰ BÁO (ngắn hạn 1-4 tuần, trung hạn 1-3 tháng, vùng mục tiêu)
+### 5. TƯ VẤN: **[TĂNG / GIẢM / ĐI NGANG]** (chiến lược xuất nhập khẩu, nhà đầu tư cá nhân, chốt lời/cắt lỗ)
 ### 6. RỦI RO & SỰ KIỆN CẦN THEO DÕI
 
-Trả lời chuyên nghiệp bằng tiếng Việt."""
+Tiếng Việt, chuyên nghiệp."""
+        analysis = self._call(system, user)
+        return {"analysis": analysis, "direction": self._dir(analysis), "pair": pair}
 
-        analysis = self._call_groq(system_prompt, user_prompt)
-        return {
-            "analysis": analysis,
-            "direction": self._extract_forex_direction(analysis),
-            "pair": pair
-        }
-
-    def _extract_recommendation(self, text: str) -> str:
-        t = text.upper()
-        if any(x in t for x in ["**MUA**", "KHUYẾN NGHỊ: MUA", "KHUYẾN NGHỊ MUA", "[MUA]"]):
-            return "BUY"
-        if any(x in t for x in ["**BÁN**", "KHUYẾN NGHỊ: BÁN", "KHUYẾN NGHỊ BÁN", "[BÁN]"]):
-            return "SELL"
-        if any(x in t for x in ["**GIỮ**", "KHUYẾN NGHỊ: GIỮ", "[GIỮ]"]):
-            return "HOLD"
+    def _rec(self, t):
+        u = t.upper()
+        if any(x in u for x in ["**MUA**","[MUA]","KHUYẾN NGHỊ MUA","KHUYẾN NGHỊ: MUA"]): return "BUY"
+        if any(x in u for x in ["**BÁN**","[BÁN]","KHUYẾN NGHỊ BÁN","KHUYẾN NGHỊ: BÁN"]): return "SELL"
+        if any(x in u for x in ["**GIỮ**","[GIỮ]","KHUYẾN NGHỊ GIỮ"]): return "HOLD"
         return "WATCH"
 
-    def _extract_forex_direction(self, text: str) -> str:
-        t = text.upper()
-        if "DỰ KIẾN TĂNG" in t or "TĂNG GIÁ" in t:
-            return "UP"
-        if "DỰ KIẾN GIẢM" in t or "GIẢM GIÁ" in t:
-            return "DOWN"
+    def _dir(self, t):
+        u = t.upper()
+        if "DỰ KIẾN TĂNG" in u or "[TĂNG]" in u or "**TĂNG**" in u: return "UP"
+        if "DỰ KIẾN GIẢM" in u or "[GIẢM]" in u or "**GIẢM**" in u: return "DOWN"
         return "SIDEWAYS"
 
 
@@ -303,36 +1597,33 @@ Trả lời chuyên nghiệp bằng tiếng Việt."""
 # ─────────────────────────────────────────────
 class AnalysisOrchestrator:
     def __init__(self):
-        self.news_agent = NewsAgent()
-        self.doc_agent = DocumentAgent()
-        self.reasoning_agent = ReasoningAgent()
+        self.news = NewsAgent()
+        self.doc  = DocumentAgent()
+        self.ai   = ReasoningAgent()
 
-    def run_stock_analysis(self, symbol: str, pdf_paths: list = None, stock_type: str = "stock") -> dict:
-        news_data = self.news_agent.search_market_news(symbol)
-
-        doc_analysis = {"summary": "", "key_metrics": {}}
+    def stock(self, symbol, pdf_paths=None, stock_type="stock"):
+        news = self.news.search_market_news(symbol)
+        doc  = {"summary":"","key_metrics":{}}
         if pdf_paths:
-            combined_text = ""
-            for path in pdf_paths:
-                combined_text += self.doc_agent.extract_pdf_text(path) + "\n\n"
-                try: os.remove(path)
+            txt = ""
+            for p in pdf_paths:
+                txt += self.doc.extract_pdf_text(p) + "\n\n"
+                try: os.remove(p)
                 except: pass
-            if combined_text.strip():
-                doc_analysis = self.doc_agent.analyze_document(combined_text, symbol)
+            if txt.strip():
+                doc = self.doc.analyze_document(txt, symbol)
+        r = self.ai.analyze_stock(symbol, news, doc, stock_type)
+        r["news_count"] = len(news)
+        r["has_documents"] = bool(pdf_paths)
+        return r
 
-        result = self.reasoning_agent.analyze_stock(symbol, news_data, doc_analysis, stock_type)
-        result["news_count"] = len(news_data)
-        result["has_documents"] = bool(pdf_paths)
-        return result
+    def forex(self, pair):
+        news = self.news.search_forex_news(pair)
+        r = self.ai.analyze_forex(pair, news)
+        r["news_count"] = len(news)
+        return r
 
-    def run_forex_analysis(self, pair: str) -> dict:
-        news_data = self.news_agent.search_forex_news(pair)
-        result = self.reasoning_agent.analyze_forex(pair, news_data)
-        result["news_count"] = len(news_data)
-        return result
-
-
-orchestrator = AnalysisOrchestrator()
+orc = AnalysisOrchestrator()
 
 
 # ─────────────────────────────────────────────
@@ -340,67 +1631,45 @@ orchestrator = AnalysisOrchestrator()
 # ─────────────────────────────────────────────
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return Response(INDEX_HTML, mimetype="text/html")
 
 @app.route("/health")
 def health():
-    return jsonify({
-        "status": "ok",
-        "agents": {
-            "news":      orchestrator.news_agent.available,
-            "document":  orchestrator.doc_agent.available,
-            "reasoning": orchestrator.reasoning_agent.available
-        }
-    })
+    return jsonify({"status":"ok","agents":{"news":orc.news.available,"document":orc.doc.available,"reasoning":orc.ai.available}})
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
     try:
-        symbol = request.form.get("symbol", "").strip().upper()
-        analysis_type = request.form.get("type", "stock")
-
+        symbol = request.form.get("symbol","").strip().upper()
+        atype  = request.form.get("type","stock")
         if not symbol:
-            return jsonify({"error": "Vui lòng nhập mã chứng khoán hoặc cặp tiền tệ"}), 400
-
-        if analysis_type == "forex" or ("." in symbol and len(symbol) <= 7):
-            result = orchestrator.run_forex_analysis(symbol)
-            return jsonify({"success": True, "data": result, "mode": "forex"})
-
+            return jsonify({"error":"Vui lòng nhập mã chứng khoán"}), 400
+        if atype == "forex" or ("." in symbol and len(symbol) <= 7):
+            return jsonify({"success":True,"data":orc.forex(symbol),"mode":"forex"})
         pdf_paths = []
         if "pdfs" in request.files:
             for f in request.files.getlist("pdfs"):
                 if f and f.filename.lower().endswith(".pdf"):
-                    tmp_path = str(TEMP_DIR / f"{uuid.uuid4()}.pdf")
-                    f.save(tmp_path)
-                    pdf_paths.append(tmp_path)
-
-        result = orchestrator.run_stock_analysis(symbol, pdf_paths, analysis_type)
-        return jsonify({"success": True, "data": result, "mode": "stock"})
-
+                    p = str(TEMP_DIR / f"{uuid.uuid4()}.pdf")
+                    f.save(p); pdf_paths.append(p)
+        return jsonify({"success":True,"data":orc.stock(symbol, pdf_paths, atype),"mode":"stock"})
     except Exception as e:
-        logger.error(f"Analysis error: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"analyze error: {e}", exc_info=True)
+        return jsonify({"error":str(e)}), 500
 
 @app.route("/api/scrape-url", methods=["POST"])
 def scrape_url():
     try:
-        data = request.get_json()
-        url = data.get("url", "")
-        if not url:
-            return jsonify({"error": "URL không hợp lệ"}), 400
+        url = (request.get_json() or {}).get("url","")
+        if not url: return jsonify({"error":"No URL"}), 400
         import requests as req
         from bs4 import BeautifulSoup
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        resp = req.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(resp.text, "lxml")
-        for tag in soup(["script", "style", "nav", "footer"]):
-            tag.decompose()
-        text = soup.get_text(separator="\n", strip=True)[:5000]
-        return jsonify({"success": True, "content": text, "url": url})
+        resp = req.get(url, headers={"User-Agent":"Mozilla/5.0"}, timeout=10)
+        soup = BeautifulSoup(resp.text,"lxml")
+        for t in soup(["script","style","nav","footer"]): t.decompose()
+        return jsonify({"success":True,"content":soup.get_text(separator="\n",strip=True)[:5000]})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        return jsonify({"error":str(e)}), 500
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT",5000)), debug=False)
