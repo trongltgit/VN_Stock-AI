@@ -8,4 +8,5 @@ requests==2.32.3
 pandas==2.2.2
 numpy==1.26.4
 matplotlib==3.9.0
-yfinance==0.2.48
+vnstock==4.0.1          # <-- Thêm cái này (quan trọng)
+pandas-ta==0.3.14b0     # Technical analysis mạnh, pure Python, dễ deploy
