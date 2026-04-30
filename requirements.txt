@@ -1,14 +1,18 @@
-  flask==3.0.3
+# VN Stock AI - requirements.txt (Dành cho Render)
+
+flask==3.0.3
 flask-cors==4.0.1
 gunicorn==22.0.0
-duckduckgo-search==6.2.13
-groq>=0.15.0
-python-dotenv==1.0.1
 requests==2.32.3
 pandas==2.2.2
 numpy==1.26.4
-plotly==5.24.0
-kaleido==0.2.1
-pandas_ta==0.3.14b0
-torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-python-dotenv
+matplotlib==3.9.0
+python-dotenv==1.0.1
+duckduckgo-search==6.2.13
+groq>=0.15.0
+
+# Torch CPU version - viết riêng để tránh lỗi
+torch
+torchvision
+torchaudio
+--index-url https://download.pytorch.org/whl/cpu
