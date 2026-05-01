@@ -1,133 +1,135 @@
+
+# Tạo templates/index.html - file HTML độc lập hoàn chỉnh
+# Tách hoàn toàn khỏi app.py
+
+html_template = '''<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>VN Stock AI v3.0 — Professional Deep Learning</title>
+<title>VN Stock AI — Professional Multi-Asset v4.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
 <style>
 :root {
   --bg:#060b14; --bg2:#0c1421; --bg3:#111d2e; --border:#1e3050; --border2:#2a4570;
   --accent:#00d4ff; --accent2:#0099cc; --gold:#f0c040; --green:#00e676; --red:#ff5252;
-  --yellow:#ffd740; --purple:#b388ff; --orange:#ff9800; --pink:#ff6b9d;
-  --text:#e8f4fd; --text2:#8baabb; --text3:#4a6b88; --card:rgba(12,20,33,0.97);
-  --glow:0 0 30px rgba(0,212,255,0.12); --radius:12px; --radius-sm:8px;
+  --yellow:#ffd740; --purple:#b388ff; --text:#e8f4fd; --text2:#8baabb; --text3:#4a6b88;
+  --card:rgba(12,20,33,0.97); --glow:0 0 30px rgba(0,212,255,0.12); --radius:12px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(0,212,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.02) 1px,transparent 1px);background-size:50px 50px}
-body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px)}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(0,212,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.025) 1px,transparent 1px);background-size:44px 44px}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px)}
 
-header{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:64px;border-bottom:1px solid var(--border);background:rgba(6,11,20,0.98);backdrop-filter:blur(20px)}
+header{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:60px;border-bottom:1px solid var(--border);background:rgba(6,11,20,0.96);backdrop-filter:blur(16px)}
 .logo{display:flex;align-items:center;gap:12px}
-.logo-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px rgba(0,212,255,0.4);animation:pulse 3s ease-in-out infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 16px rgba(0,212,255,0.4)}50%{box-shadow:0 0 24px rgba(0,212,255,0.6)}}
-.logo-name{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;letter-spacing:-0.02em}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 14px rgba(0,212,255,0.35)}
+.logo-name{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;letter-spacing:-0.02em}
 .logo-name span{color:var(--accent)}
-.logo-sub{font-size:0.65rem;color:var(--text3);font-family:'Space Mono',monospace;margin-top:2px}
+.logo-sub{font-size:0.62rem;color:var(--text3);font-family:'Space Mono',monospace;margin-top:1px}
 .header-right{display:flex;align-items:center;gap:1.5rem;font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--text3)}
 .hstatus{display:flex;align-items:center;gap:6px}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.25}}
 #htime{color:var(--text2)}
 
-.ticker-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:6px 0;overflow:hidden;position:relative;z-index:9;user-select:none}
-.ticker-inner{display:inline-flex;gap:2.5rem;white-space:nowrap;animation:scroll-ticker 50s linear infinite}
+.ticker-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:5px 0;overflow:hidden;position:relative;z-index:9;user-select:none}
+.ticker-inner{display:inline-flex;gap:2.5rem;white-space:nowrap;animation:scroll-ticker 45s linear infinite}
 .ticker-inner:hover{animation-play-state:paused}
 @keyframes scroll-ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-.tick{display:inline-flex;align-items:center;gap:7px;font-family:'Space Mono',monospace;font-size:0.72rem}
+.tick{display:inline-flex;align-items:center;gap:7px;font-family:'Space Mono',monospace;font-size:0.7rem}
 .t-sym{color:var(--accent);font-weight:700}
 .t-val{color:var(--text)}
 .t-up{color:var(--green)}
 .t-dn{color:var(--red)}
 
-main{position:relative;z-index:1;max-width:1600px;margin:0 auto;padding:1.5rem;display:grid;grid-template-columns:320px 1fr;gap:1.25rem;align-items:start}
-.sidebar{display:flex;flex-direction:column;gap:1rem;position:sticky;top:80px}
+main{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:1.5rem;display:grid;grid-template-columns:340px 1fr;gap:1.25rem;align-items:start}
+.sidebar{display:flex;flex-direction:column;gap:1rem;position:sticky;top:72px}
 
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem;position:relative;overflow:hidden;transition:border-color 0.25s,box-shadow 0.25s}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem;position:relative;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s}
 .card:hover{border-color:var(--border2);box-shadow:var(--glow)}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0.5}
-.card-title{font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;display:flex;align-items:center;gap:7px}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0.4}
+.card-title{font-family:'Syne',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:0.9rem;display:flex;align-items:center;gap:7px}
 
-.form-group{margin-bottom:0.9rem}
+.tabs{display:flex;gap:3px;background:var(--bg);border-radius:8px;padding:3px;margin-bottom:0.9rem;border:1px solid var(--border)}
+.tab-btn{flex:1;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:var(--text2);font-family:'Space Mono',monospace;font-size:0.68rem;cursor:pointer;transition:background 0.18s,color 0.18s;text-align:center;white-space:nowrap}
+.tab-btn.active{background:var(--accent);color:var(--bg);font-weight:700}
+.tab-btn:hover:not(.active){background:var(--border);color:var(--text)}
+
+.form-group{margin-bottom:0.8rem}
 .form-label{display:block;font-size:0.67rem;font-family:'Space Mono',monospace;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px}
 .input-row{display:flex;gap:5px}
-.sym-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-family:'Space Mono',monospace;font-size:0.86rem;outline:none;text-transform:uppercase;transition:border-color 0.2s,box-shadow 0.2s}
-.sym-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,0.1)}
+.sym-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Space Mono',monospace;font-size:0.84rem;outline:none;text-transform:uppercase;transition:border-color 0.2s,box-shadow 0.2s}
+.sym-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,0.09)}
 .sym-input::placeholder{color:var(--text3);text-transform:none}
-.run-btn{padding:10px 14px;background:var(--border);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--accent);font-size:0.74rem;font-family:'Space Mono',monospace;cursor:pointer;transition:all 0.18s;white-space:nowrap}
-.run-btn:hover{background:var(--border2);transform:translateY(-1px)}
-.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
-.chip{padding:4px 11px;background:var(--bg);border:1px solid var(--border);border-radius:20px;font-size:0.68rem;font-family:'Space Mono',monospace;color:var(--text2);cursor:pointer;transition:all 0.18s}
-.chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.06);transform:translateY(-1px)}
-.analyze-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:10px;color:var(--bg);font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:800;letter-spacing:0.04em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform 0.2s,box-shadow 0.2s;box-shadow:0 4px 20px rgba(0,212,255,0.3);margin-top:0.5rem}
-.analyze-btn:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(0,212,255,0.45)}
-.analyze-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
+.run-btn{padding:9px 11px;background:var(--border);border:1px solid var(--border2);border-radius:8px;color:var(--accent);font-size:0.72rem;font-family:'Space Mono',monospace;cursor:pointer;transition:background 0.18s;white-space:nowrap}
+.run-btn:hover{background:var(--border2)}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.chip{padding:3px 10px;background:var(--bg);border:1px solid var(--border);border-radius:20px;font-size:0.66rem;font-family:'Space Mono',monospace;color:var(--text2);cursor:pointer;transition:all 0.18s}
+.chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.05)}
 
-.step{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);font-size:0.74rem;font-family:'Space Mono',monospace;color:var(--text3);background:var(--bg);border:1px solid var(--border);transition:all 0.3s}
-.step.active{color:var(--accent);border-color:var(--accent);background:rgba(0,212,255,0.06)}
-.step.done{color:var(--green);border-color:var(--green);background:rgba(0,230,118,0.06)}
+.analyze-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:10px;color:var(--bg);font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:800;letter-spacing:0.04em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:transform 0.18s,box-shadow 0.18s;box-shadow:0 4px 18px rgba(0,212,255,0.28);margin-top:0.5rem}
+.analyze-btn:hover{transform:translateY(-1px);box-shadow:0 6px 26px rgba(0,212,255,0.42)}
+.analyze-btn:disabled{opacity:0.45;cursor:not-allowed;transform:none;box-shadow:none}
+
+.step{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;font-size:0.74rem;font-family:'Space Mono',monospace;color:var(--text3);background:var(--bg);border:1px solid var(--border);transition:all 0.3s}
+.step.active{color:var(--accent);border-color:var(--accent);background:rgba(0,212,255,0.05)}
+.step.done{color:var(--green);border-color:var(--green);background:rgba(0,230,118,0.05)}
 .step-body{display:flex;flex-direction:column;gap:1px}
-.step-label{font-size:0.73rem;color:var(--text2)}
-.step-sub{font-size:0.64rem;color:var(--text3)}
+.step-label{font-size:0.72rem;color:var(--text2)}
+.step-sub{font-size:0.62rem;color:var(--text3)}
 
-.content{display:flex;flex-direction:column;gap:1.2rem;min-height:520px}
+.content{display:flex;flex-direction:column;gap:1rem;min-height:520px}
 
-#welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:520px;text-align:center;gap:1.8rem}
-.w-icon{font-size:3.5rem;animation:float 3s ease-in-out infinite}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-.w-title{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.w-desc{color:var(--text2);font-size:0.92rem;max-width:420px;line-height:1.7}
-.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;width:100%;max-width:640px}
-.feat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;text-align:center;transition:all 0.2s}
-.feat-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:var(--glow)}
-.feat-icon{font-size:1.6rem;margin-bottom:6px}
-.feat-name{font-family:'Syne',sans-serif;font-size:0.74rem;font-weight:700;color:var(--accent);margin-bottom:4px}
-.feat-desc{font-size:0.66rem;color:var(--text3);line-height:1.5}
+#welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:480px;text-align:center;gap:1.5rem}
+.w-icon{font-size:3rem;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.w-title{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.w-desc{color:var(--text2);font-size:0.88rem;max-width:380px;line-height:1.6}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.9rem;width:100%;max-width:560px}
+.feat-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:0.9rem;text-align:center;transition:border-color 0.2s}
+.feat-card:hover{border-color:var(--border2)}
+.feat-icon{font-size:1.4rem;margin-bottom:5px}
+.feat-name{font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;color:var(--accent);margin-bottom:3px}
+.feat-desc{font-size:0.64rem;color:var(--text3);line-height:1.5}
 
-#loading{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:520px;gap:2.2rem}
+#loading{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:480px;gap:2rem}
 #loading.show{display:flex}
-.spinner-wrap{position:relative;width:90px;height:90px}
-.ring-outer{width:90px;height:90px;border-radius:50%;border:2.5px solid var(--border);border-top-color:var(--accent);animation:spin 1.2s linear infinite}
-.ring-inner{position:absolute;inset:12px;border-radius:50%;border:2.5px solid var(--border);border-bottom-color:var(--gold);animation:spin 0.8s linear infinite reverse}
+.spinner-wrap{position:relative;width:80px;height:80px}
+.ring-outer{width:80px;height:80px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);animation:spin 1s linear infinite}
+.ring-inner{position:absolute;inset:10px;border-radius:50%;border:2px solid var(--border);border-bottom-color:var(--gold);animation:spin 0.65s linear infinite reverse}
 @keyframes spin{to{transform:rotate(360deg)}}
-#loadLabel{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--accent)}
-.load-sub{font-size:0.74rem;color:var(--text3);font-family:'Space Mono',monospace;margin-top:4px}
-.load-steps{display:flex;flex-direction:column;gap:7px;width:100%;max-width:380px}
+#loadLabel{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--accent)}
+.load-sub{font-size:0.72rem;color:var(--text3);font-family:'Space Mono',monospace;margin-top:4px}
+.load-steps{display:flex;flex-direction:column;gap:6px;width:100%;max-width:340px}
 
-#errorBox{display:none;background:rgba(255,82,82,0.08);border:1px solid var(--red);border-radius:var(--radius-sm);padding:1.1rem 1.3rem;color:var(--red);font-size:0.85rem;line-height:1.7}
+#errorBox{display:none;background:rgba(255,82,82,0.07);border:1px solid var(--red);border-radius:10px;padding:1rem 1.2rem;color:var(--red);font-size:0.82rem;line-height:1.6}
 #errorBox.show{display:block}
 
-#result{display:none;flex-direction:column;gap:1.2rem}
+#result{display:none;flex-direction:column;gap:1rem}
 #result.show{display:flex}
 
-.res-head{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.3rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1.2rem;position:relative;overflow:hidden}
-.res-head::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
-.sym-block{display:flex;align-items:center;gap:16px}
-.sym-code{font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;color:var(--accent);letter-spacing:-0.02em}
-.sym-meta{display:flex;flex-direction:column;gap:3px}
-.sym-type{font-size:0.65rem;font-family:'Space Mono',monospace;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em}
-.sym-time{font-size:0.7rem;color:var(--text3);font-family:'Space Mono',monospace}
-.rec-badge{padding:10px 22px;border-radius:10px;font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;letter-spacing:0.07em;display:flex;align-items:center;gap:8px;border:2px solid}
+.res-head{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem 1.4rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;position:relative;overflow:hidden}
+.res-head::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.sym-block{display:flex;align-items:center;gap:14px}
+.sym-code{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--accent);letter-spacing:-0.02em}
+.sym-meta{display:flex;flex-direction:column;gap:2px}
+.sym-type{font-size:0.62rem;font-family:'Space Mono',monospace;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em}
+.sym-time{font-size:0.68rem;color:var(--text3);font-family:'Space Mono',monospace}
+
+.rec-badge{padding:8px 18px;border-radius:8px;font-family:'Syne',sans-serif;font-size:0.95rem;font-weight:800;letter-spacing:0.07em;display:flex;align-items:center;gap:7px;border:2px solid}
 .rec-BUY{border-color:var(--green);color:var(--green);background:rgba(0,230,118,0.12)}
 .rec-SELL{border-color:var(--red);color:var(--red);background:rgba(255,82,82,0.12)}
 .rec-HOLD{border-color:var(--gold);color:var(--gold);background:rgba(240,192,64,0.12)}
-.rec-WATCH{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.1)}
+.rec-WATCH{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.09)}
 
-.forecast-bar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.4rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap}
-.fc-item{display:flex;flex-direction:column;gap:4px}
-.fc-label{font-size:0.64rem;color:var(--text3);font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:0.07em}
-.fc-val{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;color:var(--text)}
+.forecast-bar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.4rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap}
+.fc-item{display:flex;flex-direction:column;gap:3px}
+.fc-label{font-size:0.62rem;color:var(--text3);font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:0.07em}
+.fc-val{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--text)}
 .fc-val.up{color:var(--green)}
 .fc-val.down{color:var(--red)}
-.fc-val.gold{color:var(--gold)}
-
-.pattern-row{display:flex;gap:8px;flex-wrap:wrap}
-.pattern-badge{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;border:1px solid;font-size:0.68rem;font-family:'Space Mono',monospace}
-.pattern-badge.bullish{border-color:var(--green);color:var(--green);background:rgba(0,230,118,0.06)}
-.pattern-badge.bearish{border-color:var(--red);color:var(--red);background:rgba(255,82,82,0.06)}
-.pattern-badge.neutral{border-color:var(--yellow);color:var(--yellow);background:rgba(255,215,64,0.06)}
 
 .badge-row{display:flex;gap:7px;flex-wrap:wrap}
 .badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid;font-size:0.65rem;font-family:'Space Mono',monospace}
@@ -135,74 +137,65 @@ main{position:relative;z-index:1;max-width:1600px;margin:0 auto;padding:1.5rem;d
 .badge.warn{border-color:var(--yellow);color:var(--yellow);background:rgba(255,215,64,0.05)}
 .badge.info{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.05)}
 
-.chart-container{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative}
-.chart-header{display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1.2rem;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.3)}
-.chart-title{font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:8px}
-.chart-controls{display:flex;gap:4px}
-.chart-btn{padding:5px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:0.65rem;font-family:'Space Mono',monospace;cursor:pointer;transition:all 0.18s}
-.chart-btn:hover,.chart-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.08)}
-#tvChart{height:520px;width:100%}
-
-.data-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:0.8rem}
-.dc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;transition:all 0.2s}
-.dc:hover{border-color:var(--border2);transform:translateY(-2px)}
-.dc-label{font-size:0.64rem;font-family:'Space Mono',monospace;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px}
-.dc-val{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;color:var(--text)}
-.dc-sub{font-size:0.7rem;font-family:'Space Mono',monospace;margin-top:4px}
+.data-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:0.7rem}
+.dc{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:0.9rem;transition:border-color 0.2s}
+.dc:hover{border-color:var(--border2)}
+.dc-label{font-size:0.62rem;font-family:'Space Mono',monospace;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px}
+.dc-val{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;color:var(--text)}
+.dc-sub{font-size:0.68rem;font-family:'Space Mono',monospace;margin-top:3px}
 .dc-sub.up{color:var(--green)}
 .dc-sub.down{color:var(--red)}
 .dc-sub.neu{color:var(--text3)}
 
-.fib-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.fib-item{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 4px;text-align:center}
-.fib-label{font-size:0.6rem;color:var(--text3);font-family:'Space Mono',monospace}
-.fib-val{font-size:0.75rem;color:var(--text);font-family:'Syne',sans-serif;font-weight:600}
+.chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.chart-title{padding:0.8rem 1.2rem;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.25);font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:7px}
+.chart-wrap img{width:100%;height:auto;display:block}
 
-.fund-table{width:100%;border-collapse:collapse;font-size:0.82rem;font-family:'Space Mono',monospace}
-.fund-table th{text-align:left;padding:10px 14px;background:var(--bg2);color:var(--accent);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--border)}
-.fund-table td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text2)}
+.fund-table{width:100%;border-collapse:collapse;font-size:0.8rem;font-family:'Space Mono',monospace}
+.fund-table th{text-align:left;padding:9px 13px;background:var(--bg2);color:var(--accent);font-size:0.66rem;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--border)}
+.fund-table td{padding:9px 13px;border-bottom:1px solid var(--border);color:var(--text2)}
 .fund-table tr:hover td{background:rgba(0,212,255,0.03);color:var(--text)}
 .td-val{text-align:right;font-weight:600;color:var(--text)}
-.td-note{color:var(--text3);font-size:0.72rem}
+.td-note{color:var(--text3);font-size:0.7rem}
 
 .report-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-.report-head{padding:0.9rem 1.2rem;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:space-between}
-.report-head h3{font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:8px}
-.copy-btn{padding:6px 14px;border-radius:6px;background:var(--bg);border:1px solid var(--border);color:var(--text2);font-size:0.68rem;font-family:'Space Mono',monospace;cursor:pointer;transition:all 0.18s}
+.report-head{padding:0.8rem 1.2rem;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:space-between}
+.report-head h3{font-family:'Syne',sans-serif;font-size:0.76rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:7px}
+.copy-btn{padding:5px 11px;border-radius:6px;background:var(--bg);border:1px solid var(--border);color:var(--text2);font-size:0.65rem;font-family:'Space Mono',monospace;cursor:pointer;transition:all 0.18s}
 .copy-btn:hover{border-color:var(--accent);color:var(--accent)}
-.report-body{padding:1.6rem;line-height:1.9;font-size:0.88rem;color:var(--text)}
-.report-body h1{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:var(--accent);margin:1.4rem 0 0.6rem}
-.report-body h2{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--gold);border-bottom:1px solid var(--border);padding-bottom:6px;margin:1.3rem 0 0.6rem}
-.report-body h3{font-family:'Syne',sans-serif;font-size:0.95rem;font-weight:700;color:var(--accent);margin:1.1rem 0 0.5rem}
+
+.report-body{padding:1.5rem;line-height:1.85;font-size:0.875rem;color:var(--text)}
+.report-body h1{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;color:var(--accent);margin:1.3rem 0 0.5rem}
+.report-body h2{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;color:var(--gold);border-bottom:1px solid var(--border);padding-bottom:5px;margin:1.2rem 0 0.5rem}
+.report-body h3{font-family:'Syne',sans-serif;font-size:0.92rem;font-weight:700;color:var(--accent);margin:1rem 0 0.4rem}
 .report-body strong{color:var(--text);font-weight:600}
 .report-body em{color:var(--text2);font-style:italic}
-.report-body ul,.report-body ol{padding-left:1.5rem;margin:0.5rem 0}
-.report-body li{margin-bottom:5px}
-.report-body hr{border:none;border-top:1px solid var(--border);margin:1.2rem 0}
-.report-body blockquote{border-left:3px solid var(--accent);padding:8px 16px;background:rgba(0,212,255,0.04);border-radius:0 8px 8px 0;margin:0.8rem 0;color:var(--text2)}
-.report-body table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:0.8rem;font-family:'Space Mono',monospace}
-.report-body th,.report-body td{padding:8px 12px;border:1px solid var(--border);text-align:left}
+.report-body ul,.report-body ol{padding-left:1.4rem;margin:0.4rem 0}
+.report-body li{margin-bottom:4px}
+.report-body hr{border:none;border-top:1px solid var(--border);margin:1rem 0}
+.report-body blockquote{border-left:3px solid var(--accent);padding:7px 14px;background:rgba(0,212,255,0.04);border-radius:0 8px 8px 0;margin:0.7rem 0;color:var(--text2)}
+.report-body table{width:100%;border-collapse:collapse;margin:0.8rem 0;font-size:0.78rem;font-family:'Space Mono',monospace}
+.report-body th,.report-body td{padding:7px 11px;border:1px solid var(--border);text-align:left}
 .report-body th{background:var(--bg2);color:var(--accent)}
-.report-body p{margin-bottom:0.6rem}
-.report-body code{background:var(--bg2);border:1px solid var(--border);padding:2px 6px;border-radius:4px;font-family:'Space Mono',monospace;font-size:0.82em;color:var(--accent)}
+.report-body p{margin-bottom:0.5rem}
+.report-body code{background:var(--bg2);border:1px solid var(--border);padding:1px 5px;border-radius:4px;font-family:'Space Mono',monospace;font-size:0.8em;color:var(--accent)}
 
-::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(--border3)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
-@media(max-width:1100px){main{grid-template-columns:1fr}.sidebar{position:static}.feat-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:640px){header{padding:0 1rem;height:56px}main{padding:1rem}.feat-grid{grid-template-columns:1fr}.sym-code{font-size:1.7rem}.header-right{display:none}.fib-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:960px){main{grid-template-columns:1fr}.sidebar{position:static}.feat-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:540px){header{padding:0 1rem}main{padding:0.9rem}.feat-grid{grid-template-columns:1fr}.sym-code{font-size:1.5rem}.header-right{display:none}}
 </style>
 </head>
 <body>
 
 <header>
   <div class="logo">
-    <div class="logo-icon">🧠</div>
+    <div class="logo-icon">📈</div>
     <div>
       <div class="logo-name">VN<span>Stock</span>AI</div>
-      <div class="logo-sub">Deep Learning v3.0 Professional</div>
+      <div class="logo-sub">Professional Multi-Asset v4.0</div>
     </div>
   </div>
   <div class="header-right">
@@ -240,8 +233,13 @@ main{position:relative;z-index:1;max-width:1600px;margin:0 auto;padding:1.5rem;d
   <aside class="sidebar">
     <div class="card">
       <div class="card-title">⚙ Cấu Hình Phân Tích</div>
+      <div class="tabs" id="tabGroup">
+        <button class="tab-btn active" data-mode="stock" onclick="setMode('stock',this)">📊 Cổ phiếu</button>
+        <button class="tab-btn" data-mode="fund" onclick="setMode('fund',this)">🏦 Quỹ</button>
+        <button class="tab-btn" data-mode="forex" onclick="setMode('forex',this)">💱 Ngoại tệ</button>
+      </div>
       <div class="form-group">
-        <label class="form-label">🔤 Mã Cổ Phiếu</label>
+        <label class="form-label" id="inputLabel">🔤 Mã Cổ Phiếu</label>
         <div class="input-row">
           <input type="text" id="symInput" class="sym-input" placeholder="VD: VCB, HPG, FPT..." autocomplete="off" autocorrect="off" spellcheck="false"/>
           <button class="run-btn" onclick="startAnalysis()">▶ Run</button>
@@ -255,31 +253,28 @@ main{position:relative;z-index:1;max-width:1600px;margin:0 auto;padding:1.5rem;d
           <span class="chip" onclick="fillSym('MBB')">MBB</span>
           <span class="chip" onclick="fillSym('ACB')">ACB</span>
           <span class="chip" onclick="fillSym('VIC')">VIC</span>
-          <span class="chip" onclick="fillSym('BID')">BID</span>
-          <span class="chip" onclick="fillSym('CTG')">CTG</span>
         </div>
       </div>
       <button class="analyze-btn" id="analyzeBtn" onclick="startAnalysis()">
-        <span>🧠</span> Phân Tích AI Deep Learning
+        <span>🤖</span> Phân Tích AI Chuyên Sâu
       </button>
     </div>
 
     <div class="card">
       <div class="card-title">🧬 Trạng Thái Hệ Thống</div>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <div class="step" id="agData"><span>📡</span><div class="step-body"><div class="step-label">Dữ liệu thị trường</div><div class="step-sub">TCBS Real-time API</div></div></div>
-        <div class="step" id="agPattern"><span>🔍</span><div class="step-body"><div class="step-label">Pattern Recognition</div><div class="step-sub">Candlestick + Chart Patterns</div></div></div>
-        <div class="step" id="agDL"><span>🤖</span><div class="step-body"><div class="step-label">Deep Learning Forecast</div><div class="step-sub">LSTM Ensemble + Confidence</div></div></div>
-        <div class="step" id="agTA"><span>📊</span><div class="step-body"><div class="step-label">Phân tích kỹ thuật</div><div class="step-sub">RSI · MACD · BB · ADX · Ichimoku</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div class="step" id="agData"><span>📡</span><div class="step-body"><div class="step-label">Dữ liệu thị trường</div><div class="step-sub">TCBS · Fmarket · ExchangeRate</div></div></div>
+        <div class="step" id="agTA"><span>📊</span><div class="step-body"><div class="step-label">Phân tích kỹ thuật</div><div class="step-sub">RSI · MACD · BB · Stoch · Williams · OBV</div></div></div>
+        <div class="step" id="agFC"><span>📐</span><div class="step-body"><div class="step-label">Dự báo xu hướng</div><div class="step-sub">Linear Regression · Momentum · Mean Reversion</div></div></div>
         <div class="step" id="agAI"><span>🧠</span><div class="step-body"><div class="step-label">AI Reasoning</div><div class="step-sub">Groq · LLaMA 70B · DeepSeek</div></div></div>
       </div>
     </div>
 
     <div class="card" style="border-color:rgba(240,192,64,0.25);">
       <div class="card-title" style="color:var(--gold);">🔑 Cấu Hình API</div>
-      <p style="font-size:0.72rem;color:var(--text3);line-height:1.8;">
+      <p style="font-size:0.7rem;color:var(--text3);line-height:1.75;">
         Thêm vào Render Environment:<br>
-        <code style="color:var(--green);background:var(--bg);padding:2px 6px;border-radius:4px;">GROQ_API_KEY_STOCK</code><br>
+        <code style="color:var(--green);background:var(--bg);padding:1px 5px;border-radius:3px;">GROQ_API_KEY_STOCK</code><br>
         <a href="https://console.groq.com" target="_blank" style="color:var(--accent);">console.groq.com</a>
         <span style="color:var(--yellow);"> ⚡ Miễn phí!</span>
       </p>
@@ -288,16 +283,16 @@ main{position:relative;z-index:1;max-width:1600px;margin:0 auto;padding:1.5rem;d
 
   <div class="content">
     <div id="welcome">
-      <div class="w-icon">🧠</div>
-      <h2 class="w-title">Phân Tích Chứng Khoán AI Deep Learning</h2>
-      <p class="w-desc">Hệ thống phân tích chuyên sâu với biểu đồ tương tác TradingView, dự báo LSTM Ensemble, nhận diện mô hình giá và báo cáo chuẩn VCBS</p>
+      <div class="w-icon">📊</div>
+      <h2 class="w-title">Phân Tích Chứng Khoán AI</h2>
+      <p class="w-desc">Hệ thống phân tích chuyên sâu với dữ liệu thật, 10+ chỉ báo kỹ thuật, dự báo xu hướng và báo cáo AI chuyên nghiệp</p>
       <div class="feat-grid">
-        <div class="feat-card"><div class="feat-icon">📈</div><div class="feat-name">Biểu Đồ Tương Tác</div><p class="feat-desc">TradingView-style với zoom, pan, crosshair</p></div>
-        <div class="feat-card"><div class="feat-icon">🤖</div><div class="feat-name">Deep Learning</div><p class="feat-desc">LSTM Ensemble Forecast với confidence intervals</p></div>
-        <div class="feat-card"><div class="feat-icon">🔍</div><div class="feat-name">Pattern Recognition</div><p class="feat-desc">Nhận diện 10+ mô hình nến và biểu đồ</p></div>
-        <div class="feat-card"><div class="feat-icon">📊</div><div class="feat-name">15+ Chỉ Báo</div><p class="feat-desc">RSI, MACD, BB, ADX, Ichimoku, Stochastic</p></div>
-        <div class="feat-card"><div class="feat-icon">📋</div><div class="feat-name">Báo Cáo VCBS</div><p class="feat-desc">7 phần chuyên nghiệp với chiến lược giao dịch</p></div>
-        <div class="feat-card"><div class="feat-icon">🎯</div><div class="feat-name">Fibonacci & S/R</div><p class="feat-desc">Các mức thoái lui và 3 vùng hỗ trợ/kháng cự</p></div>
+        <div class="feat-card"><div class="feat-icon">📈</div><div class="feat-name">Dữ Liệu Thật</div><p class="feat-desc">Lịch sử giá từ TCBS, NAV quỹ từ Fmarket, tỷ giá real-time</p></div>
+        <div class="feat-card"><div class="feat-icon">📊</div><div class="feat-name">10+ Chỉ Báo</div><p class="feat-desc">RSI, MACD, Bollinger, SMA, EMA, Stochastic, Williams %R, OBV, ATR</p></div>
+        <div class="feat-card"><div class="feat-icon">📐</div><div class="feat-name">Dự Báo Xu Hướng</div><p class="feat-desc">Linear regression, momentum analysis, mean reversion ensemble</p></div>
+        <div class="feat-card"><div class="feat-icon">🧠</div><div class="feat-name">AI Chuyên Sâu</div><p class="feat-desc">LLaMA 70B phân tích cơ bản, kỹ thuật và chiến lược giao dịch</p></div>
+        <div class="feat-card"><div class="feat-icon">📋</div><div class="feat-name">Báo Cáo Chuẩn</div><p class="feat-desc">Entry, Stop-loss, Take-profit cụ thể với Risk/Reward ratio</p></div>
+        <div class="feat-card"><div class="feat-icon">🏦</div><div class="feat-name">Cơ Bản P/E P/B</div><p class="feat-desc">ROE, EPS, Beta, vốn hóa, đánh giá định giá ngành</p></div>
       </div>
     </div>
 
@@ -305,15 +300,14 @@ main{position:relative;z-index:1;max-width:1600px;margin:0 auto;padding:1.5rem;d
       <div class="spinner-wrap"><div class="ring-outer"></div><div class="ring-inner"></div></div>
       <div style="text-align:center;">
         <div id="loadLabel">Đang phân tích...</div>
-        <div class="load-sub">Deep Learning Technical Analysis Engine v3.0</div>
+        <div class="load-sub">Professional Technical Analysis Engine v4.0</div>
       </div>
       <div class="load-steps">
         <div class="step" id="ls1"><span>📡</span> Lấy dữ liệu giá từ TCBS...</div>
-        <div class="step" id="ls2"><span>🔍</span> Nhận diện mô hình nến & biểu đồ...</div>
-        <div class="step" id="ls3"><span>🤖</span> Deep Learning Forecast (LSTM Ensemble)...</div>
-        <div class="step" id="ls4"><span>📊</span> Tính toán 15+ chỉ báo kỹ thuật...</div>
-        <div class="step" id="ls5"><span>🧠</span> AI phân tích đa chiều...</div>
-        <div class="step" id="ls6"><span>📋</span> Tổng hợp báo cáo chuyên nghiệp...</div>
+        <div class="step" id="ls2"><span>📊</span> Tính toán 10+ chỉ báo kỹ thuật...</div>
+        <div class="step" id="ls3"><span>📐</span> Dự báo xu hướng, hỗ trợ/kháng cự...</div>
+        <div class="step" id="ls4"><span>🧠</span> AI phân tích đa chiều...</div>
+        <div class="step" id="ls5"><span>📋</span> Tổng hợp báo cáo chuyên nghiệp...</div>
       </div>
     </div>
 
@@ -333,39 +327,14 @@ main{position:relative;z-index:1;max-width:1600px;margin:0 auto;padding:1.5rem;d
 
       <div class="forecast-bar" id="forecastBar" style="display:none;">
         <div class="fc-item"><div class="fc-label">Dự báo xu hướng</div><div class="fc-val" id="fcDir">--</div></div>
-        <div class="fc-item"><div class="fc-label">Phương pháp</div><div class="fc-val gold" id="fcMethod">--</div></div>
+        <div class="fc-item"><div class="fc-label">Slope/phiên</div><div class="fc-val" id="fcSlope">--</div></div>
         <div class="fc-item"><div class="fc-label">Độ tin cậy (R²)</div><div class="fc-val" id="fcR2">--</div></div>
-        <div class="fc-item"><div class="fc-label">Mục tiêu 1T</div><div class="fc-val" id="fcT1">--</div></div>
-        <div class="fc-item"><div class="fc-label">Mục tiêu 2T</div><div class="fc-val" id="fcT2">--</div></div>
-        <div class="fc-item"><div class="fc-label">Lợi nhuận kỳ vọng</div><div class="fc-val" id="fcReturn">--</div></div>
+        <div class="fc-item"><div class="fc-label">Dự báo T+5</div><div class="fc-val" id="fcT5">--</div></div>
       </div>
 
-      <div class="pattern-row" id="patternRow"></div>
       <div class="badge-row" id="badgeRow"></div>
-
-      <div class="chart-container">
-        <div class="chart-header">
-          <div class="chart-title">📈 Biểu Đồ Kỹ Thuật Tương Tác</div>
-          <div class="chart-controls">
-            <button class="chart-btn active" onclick="setTimeframe('1D',this)">1D</button>
-            <button class="chart-btn" onclick="setTimeframe('1W',this)">1W</button>
-            <button class="chart-btn" onclick="setTimeframe('1M',this)">1M</button>
-          </div>
-        </div>
-        <div id="tvChart"></div>
-      </div>
-
-      <div class="chart-container" id="forecastChartContainer" style="display:none;">
-        <div class="chart-header"><div class="chart-title">🤖 Deep Learning Forecast</div></div>
-        <img id="forecastChartImg" style="width:100%;height:auto;display:block;" alt="Forecast chart"/>
-      </div>
-
       <div class="data-grid" id="techGrid"></div>
-
-      <div class="card" id="fibCard" style="display:none;">
-        <div class="card-title">🎯 Fibonacci Retracement</div>
-        <div class="fib-grid" id="fibGrid"></div>
-      </div>
+      <div id="chartsArea"></div>
 
       <div class="card" id="fundCard" style="display:none;">
         <div class="card-title">📋 Chỉ Số Cơ Bản</div>
@@ -386,19 +355,17 @@ main{position:relative;z-index:1;max-width:1600px;margin:0 auto;padding:1.5rem;d
 </main>
 
 <script>
-let currentSymbol='';
+let currentMode='stock';
 let stepTimerId=null;
-let chartInstance=null;
-let candleSeries=null;
-let volumeSeries=null;
-let indicatorSeries={};
 
-function updateClock(){
-  const el=document.getElementById('htime');
-  if(el)el.textContent=new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-}
-setInterval(updateClock,1000);
-updateClock();
+const MODE_CFG={
+  stock:{label:'🔤 Mã Cổ Phiếu',placeholder:'VD: VCB, HPG, FPT...',chips:['VCB','VHM','HPG','FPT','TCB','MBB','ACB','VIC','BID','CTG'],typeLabel:'Cổ Phiếu | HOSE/HNX'},
+  fund:{label:'🔤 Mã Chứng Chỉ Quỹ',placeholder:'VD: E1VFVN30, VFMVSF...',chips:['E1VFVN30','VFMVSF','SSISCA','MAFPF1','FVBF','DCDS'],typeLabel:'Chứng Chỉ Quỹ'},
+  forex:{label:'💱 Cặp Tiền Tệ',placeholder:'VD: USD.VND, EUR.USD...',chips:['USD.VND','EUR.VND','GBP.VND','USD.JPY','EUR.USD','AUD.USD'],typeLabel:'Cặp Tiền Tệ'},
+};
+
+function updateClock(){const el=document.getElementById('htime');if(el)el.textContent=new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+setInterval(updateClock,1000);updateClock();
 
 async function checkHealth(){
   try{
@@ -406,12 +373,8 @@ async function checkHealth(){
     const d=await res.json();
     const el=document.getElementById('hstatus');
     if(d.status==='ok'){
-      el.textContent='Hệ thống hoạt động';
-      el.style.color='var(--green)';
-      if(d.agents){
-        if(d.agents.data)setStep('agData','done');
-        if(d.agents.reasoning)setStep('agAI','done');
-      }
+      el.textContent='Hệ thống hoạt động';el.style.color='var(--green)';
+      if(d.agents){if(d.agents.data)setStep('agData','done');if(d.agents.reasoning)setStep('agAI','done');}
     }
   }catch{
     const el=document.getElementById('hstatus');
@@ -420,27 +383,31 @@ async function checkHealth(){
 }
 checkHealth();
 
-function setStep(id,state){
-  const el=document.getElementById(id);
-  if(!el)return;
-  el.classList.remove('active','done');
-  if(state)el.classList.add(state);
+function setStep(id,state){const el=document.getElementById(id);if(!el)return;el.classList.remove('active','done');if(state)el.classList.add(state);}
+
+function setMode(mode,btn){
+  currentMode=mode;
+  document.querySelectorAll('#tabGroup .tab-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  const cfg=MODE_CFG[mode];
+  document.getElementById('inputLabel').textContent=cfg.label;
+  document.getElementById('symInput').placeholder=cfg.placeholder;
+  document.getElementById('symInput').value='';
+  const chipArea=document.getElementById('chipArea');
+  chipArea.innerHTML=cfg.chips.map(function(c){return'<span class="chip" onclick="fillSym(\''+c+'\')">'+c+'</span>';}).join('');
 }
 
-function fillSym(sym){
-  document.getElementById('symInput').value=sym;
-  document.getElementById('symInput').focus();
-}
+function fillSym(sym){document.getElementById('symInput').value=sym;document.getElementById('symInput').focus();}
 
 function startLoadSteps(){
-  const ids=['ls1','ls2','ls3','ls4','ls5','ls6'];
+  const ids=['ls1','ls2','ls3','ls4','ls5'];
   ids.forEach(function(id){setStep(id,'');});
   let i=0;
   stepTimerId=setInterval(function(){
     if(i>0)setStep(ids[i-1],'done');
     if(i<ids.length){setStep(ids[i],'active');i++;}
     else{clearInterval(stepTimerId);}
-  },2000);
+  },2200);
 }
 
 function showState(which){
@@ -450,166 +417,70 @@ function showState(which){
   document.getElementById('result').classList.toggle('show',which==='result');
 }
 
-function initInteractiveChart(ohlcvData,indicators){
-  const chartContainer=document.getElementById('tvChart');
-  chartContainer.innerHTML='';
-
-  chartInstance=LightweightCharts.createChart(chartContainer,{
-    layout:{background:{color:'#060b14'},textColor:'#8baabb'},
-    grid:{vertLines:{color:'#1e3050',style:2},horzLines:{color:'#1e3050',style:2}},
-    crosshair:{
-      mode:LightweightCharts.CrosshairMode.Normal,
-      vertLine:{color:'#00d4ff',width:1,style:2,labelBackgroundColor:'#00d4ff'},
-      horzLine:{color:'#00d4ff',width:1,style:2,labelBackgroundColor:'#00d4ff'},
-    },
-    rightPriceScale:{borderColor:'#1e3050',scaleMargins:{top:0.1,bottom:0.2}},
-    timeScale:{borderColor:'#1e3050',timeVisible:true,secondsVisible:false},
-    handleScroll:{vertTouchDrag:false},
-  });
-
-  candleSeries=chartInstance.addCandlestickSeries({
-    upColor:'#00e676',downColor:'#ff5252',
-    borderUpColor:'#00e676',borderDownColor:'#ff5252',
-    wickUpColor:'#00e676',wickDownColor:'#ff5252',
-  });
-  candleSeries.setData(ohlcvData);
-
-  volumeSeries=chartInstance.addHistogramSeries({
-    color:'#00d4ff',priceFormat:{type:'volume'},priceScaleId:'',scaleMargins:{top:0.85,bottom:0},
-  });
-  const volumeData=ohlcvData.map(function(d){
-    return{time:d.time,value:d.volume,color:d.close>=d.open?'rgba(0,230,118,0.5)':'rgba(255,82,82,0.5)'};
-  });
-  volumeSeries.setData(volumeData);
-
-  if(indicators&&indicators.sma20){
-    const s=chartInstance.addLineSeries({color:'#ff9800',lineWidth:2,title:'SMA20'});
-    s.setData(indicators.sma20.filter(function(d){return d.value!==null;}));
-    indicatorSeries['sma20']=s;
-  }
-  if(indicators&&indicators.sma50){
-    const s=chartInstance.addLineSeries({color:'#ffd740',lineWidth:2,title:'SMA50'});
-    s.setData(indicators.sma50.filter(function(d){return d.value!==null;}));
-    indicatorSeries['sma50']=s;
-  }
-  if(indicators&&indicators.sma200){
-    const s=chartInstance.addLineSeries({color:'#ff6b9d',lineWidth:2,title:'SMA200'});
-    s.setData(indicators.sma200.filter(function(d){return d.value!==null;}));
-    indicatorSeries['sma200']=s;
-  }
-  if(indicators&&indicators.ema9){
-    const s=chartInstance.addLineSeries({color:'#b388ff',lineWidth:2,title:'EMA9'});
-    s.setData(indicators.ema9.filter(function(d){return d.value!==null;}));
-    indicatorSeries['ema9']=s;
-  }
-  if(indicators&&indicators.bb_upper&&indicators.bb_lower){
-    const u=chartInstance.addLineSeries({color:'rgba(0,212,255,0.6)',lineWidth:1,lineStyle:2,title:'BB Upper'});
-    u.setData(indicators.bb_upper.filter(function(d){return d.value!==null;}));
-    const l=chartInstance.addLineSeries({color:'rgba(0,212,255,0.6)',lineWidth:1,lineStyle:2,title:'BB Lower'});
-    l.setData(indicators.bb_lower.filter(function(d){return d.value!==null;}));
-  }
-
-  chartInstance.timeScale().fitContent();
-}
-
-function setTimeframe(tf,btn){
-  document.querySelectorAll('.chart-btn').forEach(function(b){b.classList.remove('active');});
-  if(btn)btn.classList.add('active');
-}
-
 async function startAnalysis(){
   const sym=document.getElementById('symInput').value.trim().toUpperCase();
-  if(!sym){alert('Vui lòng nhập mã cổ phiếu');return;}
-  currentSymbol=sym;
-
+  if(!sym){alert('Vui lòng nhập mã');return;}
   showState('loading');
   document.getElementById('loadLabel').textContent='Đang phân tích '+sym+'...';
   document.getElementById('analyzeBtn').disabled=true;
-
   setStep('agData','active');
-  setStep('agPattern','active');
-  setStep('agDL','active');
   startLoadSteps();
-
   const fd=new FormData();
   fd.append('symbol',sym);
-  fd.append('type','stock');
-
+  fd.append('type',currentMode);
   try{
     const resp=await fetch('/api/analyze',{method:'POST',body:fd});
     clearInterval(stepTimerId);
-
-    if(!resp.ok){
-      const errData=await resp.json().catch(function(){return{};});
-      throw new Error(errData.error||'HTTP '+resp.status);
-    }
-
+    if(!resp.ok){const errData=await resp.json().catch(function(){return{};});throw new Error(errData.error||'HTTP '+resp.status);}
     const json=await resp.json();
     renderResult(json,sym);
-
   }catch(err){
     clearInterval(stepTimerId);
     showState('error');
-    document.getElementById('errorBox').innerHTML=
-      '⚠️ <strong>Lỗi:</strong> '+err.message+
-      '<br><small style="color:var(--text3);">Kiểm tra lại mã, kết nối mạng hoặc backend logs.</small>';
+    document.getElementById('errorBox').innerHTML='⚠️ <strong>Lỗi:</strong> '+err.message+'<br><small style="color:var(--text3);">Kiểm tra lại mã, kết nối mạng hoặc backend logs.</small>';
   }finally{
     document.getElementById('analyzeBtn').disabled=false;
-    setStep('agData','done');
-    setStep('agPattern','done');
-    setStep('agDL','done');
-    setStep('agTA','done');
-    setStep('agAI','done');
+    setStep('agData','done');setStep('agTA','done');setStep('agFC','done');setStep('agAI','done');
   }
 }
 
-document.getElementById('symInput').addEventListener('keydown',function(e){
-  if(e.key==='Enter')startAnalysis();
-});
+document.getElementById('symInput').addEventListener('keydown',function(e){if(e.key==='Enter')startAnalysis();});
 
 function renderResult(json,sym){
   showState('result');
   const data=json.data||{};
-
+  const mode=json.mode||currentMode;
   document.getElementById('rSym').textContent=sym;
-  document.getElementById('rType').textContent='Cổ Phiếu | HOSE/HNX';
+  const typeMap={stock:'Cổ Phiếu | HOSE/HNX',fund:'Chứng Chỉ Quỹ',forex:'Cặp Tiền Tệ'};
+  document.getElementById('rType').textContent=typeMap[mode]||mode;
   document.getElementById('rTime').textContent='Phân tích lúc: '+new Date().toLocaleString('vi-VN');
 
   const badge=document.getElementById('rBadge');
-  const rec=data.recommendation||'WATCH';
-  const recMap={BUY:'🟢 MUA',SELL:'🔴 BÁN',HOLD:'🟡 GIỮ',WATCH:'🔵 THEO DÕI'};
-  badge.textContent=recMap[rec]||rec;
-  badge.className='rec-badge rec-'+rec;
+  if(mode==='forex'){
+    const dir=data.direction||'SIDEWAYS';
+    const dirMap={UP:'▲ TĂNG',DOWN:'▼ GIẢM',SIDEWAYS:'↔ ĐI NGANG'};
+    const recFor=dir==='UP'?'BUY':dir==='DOWN'?'SELL':'HOLD';
+    badge.textContent=dirMap[dir]||dir;
+    badge.className='rec-badge rec-'+recFor;
+  }else{
+    const rec=data.recommendation||'WATCH';
+    const recMap={BUY:'🟢 MUA',SELL:'🔴 BÁN',HOLD:'🟡 GIỮ',WATCH:'🔵 THEO DÕI'};
+    badge.textContent=recMap[rec]||rec;
+    badge.className='rec-badge rec-'+rec;
+  }
 
   const fc=data.forecast||{};
   if(fc.direction){
     document.getElementById('forecastBar').style.display='';
     const fcDir=document.getElementById('fcDir');
-    fcDir.textContent=fc.direction;
-    fcDir.className='fc-val '+(fc.direction==='TĂNG'?'up':fc.direction==='GIẢM'?'down':'gold');
-    document.getElementById('fcMethod').textContent=fc.method||'Ensemble';
-    document.getElementById('fcR2').textContent=(fc.r_squared||'--')+' ('+(fc.confidence||'')+')';
-    document.getElementById('fcT1').textContent=fc.target_1w?fmtNum(fc.target_1w):'--';
-    document.getElementById('fcT2').textContent=fc.target_2w?fmtNum(fc.target_2w):'--';
-    const retEl=document.getElementById('fcReturn');
-    const ret=fc.expected_return_2w;
-    retEl.textContent=ret!==undefined?(ret>=0?'+':'')+ret+'%':'--';
-    retEl.className='fc-val '+(ret>0?'up':ret<0?'down':'');
+    fcDir.textContent=fc.direction==='TĂNG'?'▲ TĂNG':'▼ GIẢM';
+    fcDir.className='fc-val '+(fc.direction==='TĂNG'?'up':'down');
+    document.getElementById('fcSlope').textContent=fc.slope?fc.slope+' VND':'--';
+    document.getElementById('fcR2').textContent=fc.r_squared?fc.r_squared+' ('+(fc.confidence||'')+')':'--';
+    const t5=fc.forecast_5d;
+    document.getElementById('fcT5').textContent=t5&&t5.length?fmtNum(t5[t5.length-1]):'--';
   }else{
     document.getElementById('forecastBar').style.display='none';
-  }
-
-  const patterns=data.patterns||[];
-  const patRow=document.getElementById('patternRow');
-  if(patterns.length>0){
-    patRow.innerHTML=patterns.map(function(p){
-      const sig=p.signal||'neutral';
-      const cls=sig==='bullish'?'bullish':sig==='bearish'?'bearish':'neutral';
-      const icon=sig==='bullish'?'📈':sig==='bearish'?'📉':'⚖️';
-      return '<div class="pattern-badge '+cls+'">'+icon+' '+(p.name||p.pattern)+'</div>';
-    }).join('');
-  }else{
-    patRow.innerHTML='<div class="pattern-badge neutral">🔍 Không phát hiện mô hình rõ ràng</div>';
   }
 
   const priceCount=data.price_history?data.price_history.prices.length:0;
@@ -617,72 +488,42 @@ function renderResult(json,sym){
   const hasFund=data.fundamental&&Object.keys(data.fundamental).length>0;
   document.getElementById('badgeRow').innerHTML=
     badge_('ok','📡 Dữ liệu: '+(priceCount?priceCount+' phiên':'Real-time'))+
-    badge_('ok','🔍 Patterns: '+patterns.length+' mô hình')+
     badge_('ok','📊 Kỹ thuật: '+techCount+' chỉ báo')+
     badge_(hasFund?'ok':'warn','📋 Cơ bản: '+(hasFund?'Có dữ liệu':'Không có'))+
     badge_('info','🧠 AI: Hoàn thành')+
-    (fc.direction?badge_(fc.direction==='TĂNG'?'ok':'warn','🤖 DL: '+fc.direction+' (R²='+(fc.r_squared||'--')+')'):'');
-
-  const interactive=data.interactive||{};
-  if(interactive.ohlcv){
-    initInteractiveChart(interactive.ohlcv,interactive.indicators);
-  }
-
-  if(data.charts&&data.charts.forecast){
-    document.getElementById('forecastChartContainer').style.display='';
-    document.getElementById('forecastChartImg').src='data:image/png;base64,'+data.charts.forecast;
-  }else{
-    document.getElementById('forecastChartContainer').style.display='none';
-  }
+    (fc.direction?badge_(fc.direction==='TĂNG'?'ok':'warn','📐 Dự báo: '+fc.direction+' (R²='+fc.r_squared+')'):'');
 
   const tech=data.technical||{};
   const tGrid=document.getElementById('techGrid');
   let tHtml='';
-
   if(tech.current_price!==undefined)tHtml+=dc('Giá Hiện Tại',fmtNum(tech.current_price),'','');
-  if(valid(tech.rsi)){
-    const rv=parseFloat(tech.rsi);
-    const rc=rv>70?'down':rv<30?'up':'neu';
-    tHtml+=dc('RSI (14)',tech.rsi,rc,rv>70?'⚠ Quá mua':rv<30?'⚠ Quá bán':'Trung tính');
-  }
-  if(valid(tech.macd)){
-    const mc=parseFloat(tech.macd)>parseFloat(tech.macd_signal||0)?'up':'down';
-    tHtml+=dc('MACD',tech.macd,mc,'Signal: '+(tech.macd_signal||'N/A'));
-  }
+  if(valid(tech.rsi)){const rv=parseFloat(tech.rsi);const rc=rv>70?'down':rv<30?'up':'neu';tHtml+=dc('RSI (14)',tech.rsi,rc,rv>70?'⚠ Quá mua':rv<30?'⚠ Quá bán':'Trung tính');}
+  if(valid(tech.macd)){const mc=parseFloat(tech.macd)>parseFloat(tech.macd_signal||0)?'up':'down';tHtml+=dc('MACD',tech.macd,mc,'Signal: '+(tech.macd_signal||'N/A'));}
   if(valid(tech.bb_upper))tHtml+=dc('BB Upper',fmtNum(tech.bb_upper),'','Lower: '+fmtNum(tech.bb_lower));
   if(valid(tech.sma20))tHtml+=dc('SMA 20',fmtNum(tech.sma20),'','SMA50: '+fmtNum(tech.sma50));
   if(valid(tech.sma200))tHtml+=dc('SMA 200',fmtNum(tech.sma200),'','EMA9: '+fmtNum(tech.ema9));
   if(valid(tech.stoch_k))tHtml+=dc('Stoch %K',tech.stoch_k,'','%D: '+(tech.stoch_d||'N/A'));
-  if(valid(tech.williams_r)){
-    const wrv=parseFloat(tech.williams_r);
-    const wrc=wrv>-20?'down':wrv<-80?'up':'neu';
-    tHtml+=dc('Williams %R',tech.williams_r,wrc,wrv>-20?'⚠ Quá mua':wrv<-80?'⚠ Quá bán':'Trung tính');
-  }
+  if(valid(tech.williams_r)){const wrv=parseFloat(tech.williams_r);const wrc=wrv>-20?'down':wrv<-80?'up':'neu';tHtml+=dc('Williams %R',tech.williams_r,wrc,wrv>-20?'⚠ Quá mua':wrv<-80?'⚠ Quá bán':'Trung tính');}
   if(valid(tech.atr))tHtml+=dc('ATR (14)',tech.atr,'neu','Biến động TB/phiên');
   if(valid(tech.momentum))tHtml+=dc('Momentum 10',tech.momentum+'%',parseFloat(tech.momentum)>=0?'up':'down','');
-  if(valid(tech.adx))tHtml+=dc('ADX (14)',tech.adx,parseFloat(tech.adx)>25?'up':'neu',parseFloat(tech.adx)>25?'Xu hướng mạnh':'Xu hướng yếu');
-  if(valid(tech.support1)){
-    tHtml+=dc('Hỗ Trợ 1',fmtNum(tech.support1),'up','Hỗ Trợ 2: '+fmtNum(tech.support2));
-    tHtml+=dc('Kháng Cự 1',fmtNum(tech.resistance1),'down','Kháng Cự 2: '+fmtNum(tech.resistance2));
-  }
+  if(valid(tech.support1)){tHtml+=dc('Hỗ Trợ 1',fmtNum(tech.support1),'up','Hỗ Trợ 2: '+fmtNum(tech.support2));tHtml+=dc('Kháng Cự 1',fmtNum(tech.resistance1),'down','Kháng Cự 2: '+fmtNum(tech.resistance2));}
   if(tech.trend_short)tHtml+=dc('Xu Hướng NH',tech.trend_short,tech.trend_short==='TĂNG'?'up':'down','');
   if(tech.trend_medium)tHtml+=dc('Xu Hướng TH',tech.trend_medium,tech.trend_medium==='TĂNG'?'up':'down','');
   if(tech.trend_long)tHtml+=dc('Xu Hướng DH',tech.trend_long,tech.trend_long==='TĂNG'?'up':'down','');
+  if(data.fund_info){const fi=data.fund_info;tHtml+=dc('NAV Hiện Tại',fmtNum(fi.latest_nav),fi.nav_change>=0?'up':'down','Δ '+(fi.nav_change>=0?'+':'')+parseFloat(fi.nav_change).toFixed(4));tHtml+=dc('Công Ty QL',fi.management_company||'N/A','neu','');}
+  if(data.rate!==undefined)tHtml+=dc('Tỷ Giá',data.rate,'neu','');
   tGrid.innerHTML=tHtml;
 
-  const fib=data.fibonacci||{};
-  const fibCard=document.getElementById('fibCard');
-  if(Object.keys(fib).length>0){
-    fibCard.style.display='';
-    document.getElementById('fibGrid').innerHTML=Object.entries(fib).map(function([k,v]){
-      return '<div class="fib-item"><div class="fib-label">'+k+'</div><div class="fib-val">'+fmtNum(v)+'</div></div>';
-    }).join('');
-  }else{
-    fibCard.style.display='none';
+  const ca=document.getElementById('chartsArea');
+  ca.innerHTML='';
+  if(data.charts){
+    if(data.charts.main)ca.innerHTML+='<div class="chart-wrap"><div class="chart-title">📈 Biểu Đồ Kỹ Thuật Tổng Hợp</div><img src="data:image/png;base64,'+data.charts.main+'" alt="Technical chart"/></div>';
+    if(data.charts.forecast)ca.innerHTML+='<div class="chart-wrap" style="margin-top:1rem;"><div class="chart-title">📐 Deep Learning Forecast</div><img src="data:image/png;base64,'+data.charts.forecast+'" alt="Forecast chart"/></div>';
+    if(data.charts.macd)ca.innerHTML+='<div class="chart-wrap" style="margin-top:1rem;"><div class="chart-title">📊 MACD &amp; Stochastic</div><img src="data:image/png;base64,'+data.charts.macd+'" alt="MACD chart"/></div>';
   }
 
-  const fund=data.fundamental||{};
   const fundCard=document.getElementById('fundCard');
+  const fund=data.fundamental||{};
   if(Object.keys(fund).length>0){
     fundCard.style.display='';
     const tbody=fundCard.querySelector('tbody');
@@ -700,9 +541,7 @@ function renderResult(json,sym){
     if(fund.exchange)rows.push(['Sàn Giao Dịch',fund.exchange,'']);
     if(fund['52w_high'])rows.push(['Cao 52 Tuần',fund['52w_high'],'']);
     if(fund['52w_low'])rows.push(['Thấp 52 Tuần',fund['52w_low'],'']);
-    tbody.innerHTML=rows.map(function(r){
-      return '<tr><td>'+r[0]+'</td><td class="td-val">'+r[1]+'</td><td class="td-note">'+r[2]+'</td></tr>';
-    }).join('');
+    tbody.innerHTML=rows.map(function(r){return'<tr><td>'+r[0]+'</td><td class="td-val">'+r[1]+'</td><td class="td-note">'+r[2]+'</td></tr>';}).join('');
   }else{
     fundCard.style.display='none';
   }
@@ -711,11 +550,11 @@ function renderResult(json,sym){
 }
 
 function valid(v){return v!==undefined&&v!==null&&v!=='N/A'&&v!=='';}
-function badge_(cls,text){return '<div class="badge '+cls+'">'+text+'</div>';}
+function badge_(cls,text){return'<div class="badge '+cls+'">'+text+'</div>';}
 function dc(label,val,colorCls,sub){
   const colorMap={up:'var(--green)',down:'var(--red)',neu:'var(--text3)','':'var(--text)'};
   const col=colorMap[colorCls]||'var(--text)';
-  return '<div class="dc"><div class="dc-label">'+label+'</div><div class="dc-val" style="color:'+col+'">'+val+'</div>'+(sub?'<div class="dc-sub '+(colorCls||'neu')+'">'+sub+'</div>':'')+'</div>';
+  return'<div class="dc"><div class="dc-label">'+label+'</div><div class="dc-val" style="color:'+col+'">'+val+'</div>'+(sub?'<div class="dc-sub '+(colorCls||'neu')+'">'+sub+'</div>':'')+'</div>';
 }
 function fmtNum(n){
   if(n===undefined||n===null||n==='N/A')return'N/A';
@@ -767,9 +606,7 @@ function copyReport(){
     const orig=btn.textContent;
     btn.textContent='✅ Đã sao chép!';
     setTimeout(function(){btn.textContent=orig;},2000);
-  }).catch(function(){
-    alert('Không thể sao chép. Hãy chọn và copy thủ công.');
-  });
+  }).catch(function(){alert('Không thể sao chép. Hãy chọn và copy thủ công.');});
 }
 </script>
 </body>
