@@ -32,12 +32,28 @@ CORS(app)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
+# Cache in-memory đơn giản — tránh gọi YFinance nhiều lần liên tiếp
+import threading as _threading
+_cache: dict = {}
+_cache_lock = _threading.Lock()
+
+def _cache_get(key: str):
+    with _cache_lock:
+        entry = _cache.get(key)
+        if entry and (time.time() - entry["ts"]) < 300:  # 5 phút
+            return entry["val"]
+    return None
+
+def _cache_set(key: str, val):
+    with _cache_lock:
+        _cache[key] = {"val": val, "ts": time.time()}
+
 # ══════════════════════════════════════════════════════════════════════
 # CONFIGURATION
 # ══════════════════════════════════════════════════════════════════════
 
 class Config:
-    STOCK_SOURCES = ['TCBS', 'VCI', 'VNDIRECT', 'YFINANCE']
+    STOCK_SOURCES = ['TCBS', 'VCI', 'YFINANCE']  # Bỏ VNDirect - luôn timeout
     FUND_SOURCE = 'FMARKET'
     FOREX_SOURCE = 'MSN'
     
@@ -53,9 +69,12 @@ class Config:
     BB_STD = 2.0
     ATR_PERIOD = 14
     
-    TIMEOUT_SHORT = 10
-    TIMEOUT_MEDIUM = 20
-    TIMEOUT_LONG = 30
+    TIMEOUT_SHORT = 5   # Giảm từ 10 → 5: nếu bị block thì fail nhanh
+    TIMEOUT_MEDIUM = 8  # Giảm từ 20 → 8
+    TIMEOUT_LONG = 15   # Giảm từ 30 → 15
+    
+    # Cache in-memory để tránh YFinance rate limit
+    CACHE_TTL_SECONDS = 300  # 5 phút
 
 # ══════════════════════════════════════════════════════════════════════
 # DATA PROVIDERS — REAL DATA ONLY
@@ -71,7 +90,7 @@ class DataProvider:
     
     @classmethod
     def fetch(cls, url: str, params: dict = None, headers: dict = None, 
-              timeout: int = 20, retries: int = 3) -> Optional[dict]:
+              timeout: int = 20, retries: int = 1) -> Optional[dict]:
         h = {**cls.HEADERS, **(headers or {})}
         for attempt in range(retries):
             try:
@@ -84,11 +103,14 @@ class DataProvider:
                 elif r.status_code == 429:
                     time.sleep(2 ** attempt)
                     continue
+                elif r.status_code in (403, 401, 503):
+                    return None  # Bị block, không retry
             except requests.exceptions.Timeout:
                 logger.warning(f"Timeout attempt {attempt + 1} for {url}")
+                return None  # Timeout lần 1 là đủ, không retry
             except Exception as e:
                 logger.warning(f"Fetch error attempt {attempt + 1}: {e}")
-            time.sleep(1)
+            time.sleep(0.5)
         return None
 
 class TCBSProvider(DataProvider):
@@ -362,68 +384,95 @@ class VNDirectProvider(DataProvider):
 
 
 class YFinanceProvider:
-    """Yahoo Finance — global fallback, không bị block IP, hỗ trợ cổ phiếu VN (.VN suffix)"""
+    """Yahoo Finance — global fallback, không bị block IP, hỗ trợ cổ phiếu VN (.VN / .HN)"""
 
-    HNX_SYMBOLS = {"SHB", "ACB", "PVS", "VCS", "CEO", "HUT", "NTP", "PVI", "SHS", "VGC"}
+    HNX_SYMBOLS = {"SHB", "ACB", "PVS", "VCS", "CEO", "HUT", "NTP", "PVI", "SHS", "VGC",
+                   "MBB", "MSN", "BID", "CTG", "TCB", "VPB", "HDB", "OCB", "LPB", "KLB"}
 
     @classmethod
-    def _ticker(cls, symbol: str) -> str:
+    def _tickers(cls, symbol: str) -> list:
         symbol = symbol.upper().strip()
-        return f"{symbol}.HN" if symbol in cls.HNX_SYMBOLS else f"{symbol}.VN"
+        if symbol in cls.HNX_SYMBOLS:
+            return [f"{symbol}.HN", f"{symbol}.VN"]
+        return [f"{symbol}.VN", f"{symbol}.HN"]
 
     @classmethod
-    def _flatten(cls, df: pd.DataFrame) -> pd.DataFrame:
-        """Flatten MultiIndex columns từ yfinance >= 0.2.x"""
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = [col[0] for col in df.columns]
-        return df
-
-    @classmethod
-    def _download(cls, ticker: str, period: str) -> Optional[pd.DataFrame]:
+    def _fetch_ticker(cls, ticker: str, period: str) -> Optional[pd.DataFrame]:
+        """Dùng Ticker.history() thay vì download() — ít rate limit hơn"""
+        cached = _cache_get(f"yf:{ticker}")
+        if cached is not None:
+            logger.info(f"YFinance cache hit: {ticker}")
+            return cached
         try:
-            df = yf.download(ticker, period=period, interval="1d",
-                             progress=False, auto_adjust=True)
-            if df is not None and len(df) >= 30:
-                return cls._flatten(df)
-        except Exception:
-            pass
+            t = yf.Ticker(ticker)
+            df = t.history(period=period, interval="1d", auto_adjust=True)
+            if df is None or len(df) < 30:
+                return None
+            df = df.reset_index()
+            # Flatten MultiIndex nếu có
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = [c[0] for c in df.columns]
+            df = df.rename(columns={"Date": "time", "Datetime": "time"})
+            df["time"] = pd.to_datetime(df["time"]).dt.tz_localize(None)
+            for col in ["Open", "High", "Low", "Close"]:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
+                    med = df[col].median()
+                    if pd.notna(med) and 0 < med < 1000:
+                        df[col] = df[col] * 1000  # nghìn đồng → đồng
+            df["Volume"] = pd.to_numeric(df["Volume"], errors="coerce").fillna(0) if "Volume" in df.columns else 0
+            df = df.dropna(subset=["Close"]).sort_values("time").reset_index(drop=True)
+            if len(df) >= 30:
+                _cache_set(f"yf:{ticker}", df)
+                return df
+        except Exception as e:
+            if "rate" in str(e).lower() or "429" in str(e):
+                logger.warning(f"YFinance rate limited for {ticker}, retry after 3s")
+                time.sleep(3)
+                try:
+                    t = yf.Ticker(ticker)
+                    df = t.history(period=period, interval="1d", auto_adjust=True)
+                    if df is not None and len(df) >= 30:
+                        df = df.reset_index()
+                        if isinstance(df.columns, pd.MultiIndex):
+                            df.columns = [c[0] for c in df.columns]
+                        df = df.rename(columns={"Date": "time", "Datetime": "time"})
+                        df["time"] = pd.to_datetime(df["time"]).dt.tz_localize(None)
+                        for col in ["Open", "High", "Low", "Close"]:
+                            if col in df.columns:
+                                df[col] = pd.to_numeric(df[col], errors="coerce")
+                                med = df[col].median()
+                                if pd.notna(med) and 0 < med < 1000:
+                                    df[col] = df[col] * 1000
+                        df["Volume"] = pd.to_numeric(df["Volume"], errors="coerce").fillna(0) if "Volume" in df.columns else 0
+                        df = df.dropna(subset=["Close"]).sort_values("time").reset_index(drop=True)
+                        if len(df) >= 30:
+                            _cache_set(f"yf:{ticker}", df)
+                            return df
+                except Exception:
+                    pass
+            logger.warning(f"YFinance error for {ticker}: {e}")
         return None
 
     @classmethod
     def get_historical(cls, symbol: str, days: int = 500) -> Optional[pd.DataFrame]:
-        try:
-            period = f"{min(days // 365 + 1, 5)}y"
-            ticker = cls._ticker(symbol)
-            df = cls._download(ticker, period)
-            if df is None or len(df) < 30:
-                alt = f"{symbol}.HN" if ticker.endswith(".VN") else f"{symbol}.VN"
-                df = cls._download(alt, period)
-            if df is None or len(df) < 30:
-                return None
-            df = df.reset_index()
-            # Đổi tên cột — sau flatten còn: Date/Datetime, Open, High, Low, Close, Volume
-            df = df.rename(columns={"Date": "time", "Datetime": "time"})
-            df["time"] = pd.to_datetime(df["time"])
-            for col in ["Open", "High", "Low", "Close"]:
-                if col in df.columns:
-                    df[col] = pd.to_numeric(df[col], errors="coerce")
-                    median_price = df[col].median()
-                    if pd.notna(median_price) and median_price < 1000:
-                        df[col] = df[col] * 1000  # đơn vị nghìn đồng → đồng
-            df["Volume"] = pd.to_numeric(df["Volume"], errors="coerce").fillna(0) if "Volume" in df.columns else 0
-            df = df.dropna(subset=["Close"]).sort_values("time").reset_index(drop=True)
-            logger.info(f"YFinance: Fetched {len(df)} bars for {symbol} ({ticker})")
-            return df
-        except Exception as e:
-            logger.warning(f"YFinance error for {symbol}: {e}")
-            return None
+        period = f"{min(days // 365 + 1, 5)}y"
+        for ticker in cls._tickers(symbol):
+            df = cls._fetch_ticker(ticker, period)
+            if df is not None:
+                logger.info(f"YFinance: Fetched {len(df)} bars for {symbol} ({ticker})")
+                return df
+        return None
 
     @classmethod
     def get_fundamental(cls, symbol: str) -> dict:
         try:
-            ticker = cls._ticker(symbol)
+            ticker = cls._tickers(symbol)[0]
+            cached = _cache_get(f"yf_info:{ticker}")
+            if cached:
+                return cached
             info = yf.Ticker(ticker).info or {}
-            return {
+            result = {
                 "pe": info.get("trailingPE") or info.get("forwardPE"),
                 "pb": info.get("priceToBook"),
                 "eps": info.get("trailingEps"),
@@ -437,6 +486,8 @@ class YFinanceProvider:
                 "avg_volume": info.get("averageVolume"),
                 "dividend_yield": info.get("dividendYield"),
             }
+            _cache_set(f"yf_info:{ticker}", result)
+            return result
         except Exception as e:
             logger.warning(f"YFinance fundamental error for {symbol}: {e}")
             return {}
@@ -667,33 +718,37 @@ class StockDataManager:
     def __init__(self):
         self.tcbs = TCBSProvider()
         self.vci = VCIProvider()
-        self.vndirect = VNDirectProvider()
         self.yfinance = YFinanceProvider()
         self.fmarket = FMarketProvider()
         self.msn = MSNProvider()
     
     def get_stock_data(self, symbol: str, days: int = 500) -> Tuple[Optional[pd.DataFrame], str, dict]:
         symbol = symbol.upper().strip()
+        cached = _cache_get(f"stock:{symbol}")
+        if cached is not None:
+            logger.info(f"Cache hit for stock: {symbol}")
+            return cached
         df = self.tcbs.get_historical(symbol, days)
         if df is not None and len(df) >= 30:
             fund = self.tcbs.get_fundamental(symbol)
             quote = self.tcbs.get_quote(symbol)
-            return df, "TCBS", {**fund, **{f"quote_{k}": v for k, v in quote.items()}}
+            result = (df, "TCBS", {**fund, **{f"quote_{k}": v for k, v in quote.items()}})
+            _cache_set(f"stock:{symbol}", result)
+            return result
         logger.info(f"Falling back to VCI for {symbol}")
         df = self.vci.get_historical(symbol, days)
         if df is not None and len(df) >= 30:
             fund = self.vci.get_fundamental(symbol)
-            return df, "VCI", fund
-        logger.info(f"Falling back to VNDirect for {symbol}")
-        df = self.vndirect.get_historical(symbol, days)
-        if df is not None and len(df) >= 30:
-            fund = self.vndirect.get_fundamental(symbol)
-            return df, "VNDirect", fund
+            result = (df, "VCI", fund)
+            _cache_set(f"stock:{symbol}", result)
+            return result
         logger.info(f"Falling back to YFinance for {symbol}")
         df = self.yfinance.get_historical(symbol, days)
         if df is not None and len(df) >= 30:
             fund = self.yfinance.get_fundamental(symbol)
-            return df, "YFinance", fund
+            result = (df, "YFinance", fund)
+            _cache_set(f"stock:{symbol}", result)
+            return result
         logger.error(f"No data available for {symbol} from any source")
         return None, "NONE", {}
     
