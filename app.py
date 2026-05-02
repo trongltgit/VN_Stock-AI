@@ -1,21 +1,3 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>VN Stock AI v6.1 — Professional Analysis</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://unpkg.com/lightweight-charts@5.0.0/dist/lightweight-charts.standalone.production.js"></script>
-<style>
-:root{
-  --bg:#030810;--bg2:#080f1c;--bg3:# Tôi hiểu rồi! Bạn muốn **3 file độc lập hoàn toàn**, không dùng `render_template_string` mà dùng file HTML riêng ở `/templates/index.html`. Tôi sẽ sửa lại đúng cách.
-
----
-
-## 📁 FILE 1: `app.py` — Backend Flask (Đã sửa dùng `render_template`)
-
-```python
 """
 VN Stock AI v6.1 — Professional Multi-Asset Analysis System
 Real Data · Linear Forecast · Interactive Charts · VCBS-Style Reports
@@ -24,7 +6,9 @@ Data Sources: TCBS (primary) → VCI (fallback) → FMarket (funds) → MSN (for
 import os, json, logging, traceback, warnings, re, math
 from datetime import datetime, timedelta, date
 from typing import Dict, List, Optional, Tuple, Any
+from dataclasses import dataclass, asdict
 from collections import deque
+import threading
 import time
 
 warnings.filterwarnings("ignore")
@@ -36,7 +20,8 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-from sklearn.preprocessing import MinMaxScaler
+# Scikit-learn cho ML nhẹ
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
@@ -54,9 +39,11 @@ class Config:
     STOCK_SOURCES = ['TCBS', 'VCI']
     FUND_SOURCE = 'FMARKET'
     FOREX_SOURCE = 'MSN'
+    
     LOOKBACK = 60
     FORECAST_DAYS = 10
     FORECAST_CONFIDENCE = 0.95
+    
     RSI_PERIOD = 14
     MACD_FAST = 12
     MACD_SLOW = 26
@@ -64,24 +51,26 @@ class Config:
     BB_PERIOD = 20
     BB_STD = 2.0
     ATR_PERIOD = 14
+    
     TIMEOUT_SHORT = 10
     TIMEOUT_MEDIUM = 20
     TIMEOUT_LONG = 30
 
 # ══════════════════════════════════════════════════════════════════════
-# DATA PROVIDERS
+# DATA PROVIDERS — REAL DATA ONLY
 # ══════════════════════════════════════════════════════════════════════
 
 class DataProvider:
     HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*",
         "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
         "Connection": "keep-alive",
     }
     
     @classmethod
-    def fetch(cls, url: str, params: dict = None, headers: dict = None, timeout: int = 20, retries: int = 3) -> Optional[dict]:
+    def fetch(cls, url: str, params: dict = None, headers: dict = None, 
+              timeout: int = 20, retries: int = 3) -> Optional[dict]:
         h = {**cls.HEADERS, **(headers or {})}
         for attempt in range(retries):
             try:
@@ -102,6 +91,7 @@ class DataProvider:
         return None
 
 class TCBSProvider(DataProvider):
+    """TCBS API - Primary source for Vietnam stocks (2025)"""
     BASE_URL = "https://apipubaws.tcbs.com.vn"
     
     @classmethod
@@ -109,8 +99,10 @@ class TCBSProvider(DataProvider):
         try:
             symbol = symbol.upper().strip()
             url = f"{cls.BASE_URL}/stock-insight/v1/stock/bars-long-term"
+            
             end_time = int(datetime.now().timestamp())
             start_time = int((datetime.now() - timedelta(days=days * 2)).timestamp())
+            
             params = {
                 "ticker": symbol,
                 "type": "stock",
@@ -118,13 +110,17 @@ class TCBSProvider(DataProvider):
                 "from": start_time,
                 "to": end_time,
             }
+            
             data = cls.fetch(url, params=params, timeout=Config.TIMEOUT_MEDIUM)
             if not data or not isinstance(data, dict):
                 return None
+            
             bars = data.get("data", [])
-            if not bars:
+            if not bars or not isinstance(bars, list):
                 return None
+            
             df = pd.DataFrame(bars)
+            
             col_map = {
                 't': 'time', 'T': 'time', 'time': 'time', 'tradingDate': 'time',
                 'o': 'Open', 'open': 'Open', 'Open': 'Open',
@@ -134,6 +130,7 @@ class TCBSProvider(DataProvider):
                 'v': 'Volume', 'volume': 'Volume', 'Volume': 'Volume',
             }
             df = df.rename(columns=col_map)
+            
             if 'time' in df.columns:
                 sample = df['time'].iloc[0] if len(df) > 0 else 0
                 if sample > 1e12:
@@ -142,15 +139,21 @@ class TCBSProvider(DataProvider):
                     df['time'] = pd.to_datetime(df['time'], unit='s')
                 else:
                     df['time'] = pd.to_datetime(df['time'])
+            
             for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce')
-            df = df.dropna(subset=['Close']).sort_values('time').reset_index(drop=True)
+            
+            df = df.dropna(subset=['Close'])
+            df = df.sort_values('time').reset_index(drop=True)
+            
             if len(df) < 30:
                 logger.warning(f"TCBS: Insufficient data for {symbol}: {len(df)} bars")
                 return None
+            
             logger.info(f"TCBS: Fetched {len(df)} bars for {symbol}")
             return df
+            
         except Exception as e:
             logger.warning(f"TCBS historical error for {symbol}: {e}")
             return None
@@ -163,6 +166,7 @@ class TCBSProvider(DataProvider):
             data = cls.fetch(url, timeout=Config.TIMEOUT_SHORT)
             if not data or not isinstance(data, dict):
                 return {}
+            
             d = data.get("data", data)
             return {
                 "pe": d.get("pe") or d.get("PE") or d.get("currentPE"),
@@ -800,18 +804,24 @@ class LinearForecaster:
     def fit(self, df: pd.DataFrame, validation_split: float = 0.15) -> dict:
         features = self._build_features(df)
         target = df["Close"].values
+        
         X = features[self.lookback:]
         y = target[self.lookback:]
+        
         if len(X) < 30:
             return {"success": False, "error": "Insufficient data"}
+        
         split_idx = int(len(X) * (1 - validation_split))
         X_train, X_val = X[:split_idx], X[split_idx:]
         y_train, y_val = y[:split_idx], y[split_idx:]
+        
         self.model.fit(X_train, y_train)
+        
         train_pred = self.model.predict(X_train)
         val_pred = self.model.predict(X_val)
         train_r2 = r2_score(y_train, train_pred)
         val_r2 = r2_score(y_val, val_pred)
+        
         self.last_fit_result = {
             "success": True,
             "train_r2": float(train_r2),
@@ -825,22 +835,29 @@ class LinearForecaster:
             fit_result = self.fit(df)
             if not fit_result["success"]:
                 return self._fallback_forecast(df)
+        
         features = self._build_features(df)
         last_features = features[-1:].reshape(1, -1)
+        
         predictions = []
         current_close = float(df["Close"].iloc[-1])
+        
         for i in range(self.forecast_horizon):
             pred = self.model.predict(last_features)[0]
             predictions.append(pred)
             last_features = np.roll(last_features, -1, axis=1)
             last_features[0, -1] = pred / current_close
+        
         pred = np.array(predictions)
+        
         volatility = df["Close"].pct_change().std() * np.sqrt(252)
         last_price = float(df["Close"].iloc[-1])
         se = [volatility * np.sqrt(i+1) * last_price for i in range(self.forecast_horizon)]
         upper = [min(p + 1.96 * s, p * 1.1) for p, s in zip(pred, se)]
         lower = [max(p - 1.96 * s, p * 0.9) for p, s in zip(pred, se)]
+        
         val_r2 = self.last_fit_result.get("val_r2", 0) if self.last_fit_result else 0
+        
         return {
             "method": "Linear Regression + Technical Features",
             "direction": "TĂNG" if pred[-1] > last_price * 1.005 else "GIẢM" if pred[-1] < last_price * 0.995 else "ĐI NGANG",
@@ -1173,9 +1190,11 @@ class Orchestrator:
         fund = {k: v for k, v in extra.items() if not k.startswith("quote_")}
         quote = {k.replace("quote_", ""): v for k, v in extra.items() if k.startswith("quote_")}
         
+        # Linear Forecast
         fc = self.forecaster.predict(df)
         fc = self._forecast_points(df, fc)
         
+        # AI Report
         ai = self.ai.generate_stock_report(sym, tech, fund, fc)
         
         return {
@@ -1280,7 +1299,7 @@ orc = Orchestrator()
 
 @app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
