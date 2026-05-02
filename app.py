@@ -389,9 +389,23 @@ class YFinanceProvider:
     HNX_SYMBOLS = {"SHB", "ACB", "PVS", "VCS", "CEO", "HUT", "NTP", "PVI", "SHS", "VGC",
                    "MBB", "MSN", "BID", "CTG", "TCB", "VPB", "HDB", "OCB", "LPB", "KLB"}
 
+    # Map chỉ số & mã đặc biệt → Yahoo Finance ticker
+    INDEX_MAP = {
+        "VNINDEX": "^VNINDEX", "VN-INDEX": "^VNINDEX", "VN_INDEX": "^VNINDEX",
+        "VN30": "^VN30", "VN-30": "^VN30",
+        "HNX": "^HNX30", "HNX30": "^HNX30", "HNX-30": "^HNX30",
+        "UPCOM": "^UPCOM",
+        "GOLD": "GC=F", "SILVER": "SI=F", "OIL": "CL=F",
+        "SP500": "^GSPC", "S&P500": "^GSPC", "NASDAQ": "^IXIC", "DOW": "^DJI",
+        "BTC": "BTC-USD", "ETH": "ETH-USD",
+    }
+
     @classmethod
     def _tickers(cls, symbol: str) -> list:
         symbol = symbol.upper().strip()
+        # Ưu tiên map đặc biệt (chỉ số, hàng hóa)
+        if symbol in cls.INDEX_MAP:
+            return [cls.INDEX_MAP[symbol]]
         if symbol in cls.HNX_SYMBOLS:
             return [f"{symbol}.HN", f"{symbol}.VN"]
         return [f"{symbol}.VN", f"{symbol}.HN"]
@@ -640,6 +654,213 @@ class FMarketProvider(DataProvider):
             logger.warning(f"FMarket industry error: {e}")
             return []
 
+class CafeFFundProvider(DataProvider):
+    """CafeF — nguồn dữ liệu quỹ mở VN tổng hợp, hoạt động tốt từ server nước ngoài"""
+    BASE_URL = "https://s.cafef.vn"
+    HEADERS = {
+        **DataProvider.HEADERS,
+        "Referer": "https://cafef.vn/",
+        "Origin": "https://cafef.vn",
+    }
+
+    @classmethod
+    def get_nav_history(cls, fund_code: str, days: int = 500) -> Optional[pd.DataFrame]:
+        try:
+            # Thử CafeF fund history endpoint
+            urls_to_try = [
+                f"{cls.BASE_URL}/du-lieu/Ajax/Quy/FundHistoryData.ashx",
+                f"{cls.BASE_URL}/du-lieu/Ajax/Quy/QuyHistoryData.ashx",
+            ]
+            for base_url in urls_to_try:
+                for page_size in [300, 500, 200]:
+                    params = {"fundCode": fund_code, "page": 1, "pageSize": page_size}
+                    data = cls.fetch(base_url, params=params, headers=cls.HEADERS, timeout=8)
+                    if data and isinstance(data, dict):
+                        items = (data.get("Data") or data.get("data") or
+                                 data.get("Items") or data.get("items") or [])
+                        if items and isinstance(items, list) and len(items) >= 10:
+                            df = pd.DataFrame(items)
+                            # Chuẩn hóa tên cột
+                            col_map = {
+                                "Ngay": "time", "Date": "time", "date": "time",
+                                "NavDate": "time", "navDate": "time",
+                                "Nav": "Close", "nav": "Close", "NAV": "Close",
+                                "NavPerShare": "Close", "navPerShare": "Close",
+                            }
+                            df = df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
+                            if "time" not in df.columns:
+                                time_candidates = [c for c in df.columns if "date" in c.lower() or "ngay" in c.lower() or "time" in c.lower()]
+                                if time_candidates:
+                                    df = df.rename(columns={time_candidates[0]: "time"})
+                            if "Close" not in df.columns:
+                                nav_candidates = [c for c in df.columns if "nav" in c.lower() or "close" in c.lower() or "gia" in c.lower()]
+                                if nav_candidates:
+                                    df = df.rename(columns={nav_candidates[0]: "Close"})
+                            if "time" in df.columns and "Close" in df.columns:
+                                df["time"] = pd.to_datetime(df["time"], errors="coerce")
+                                df["Close"] = pd.to_numeric(df["Close"], errors="coerce")
+                                df = df.dropna(subset=["time", "Close"])
+                                df = df.sort_values("time").reset_index(drop=True)
+                                df["Open"] = df["Close"].shift(1).fillna(df["Close"])
+                                df["High"] = df["Close"] * 1.002
+                                df["Low"]  = df["Close"] * 0.998
+                                df["Volume"] = 0
+                                if len(df) >= 10:
+                                    logger.info(f"CafeF: Fetched {len(df)} NAV rows for {fund_code}")
+                                    return df
+        except Exception as e:
+            logger.warning(f"CafeF fund error for {fund_code}: {e}")
+        return None
+
+    @classmethod
+    def get_fund_info(cls, fund_code: str) -> dict:
+        """Lấy thông tin quỹ từ CafeF"""
+        try:
+            url = f"{cls.BASE_URL}/du-lieu/Ajax/Quy/FundInfo.ashx"
+            params = {"fundCode": fund_code}
+            data = cls.fetch(url, params=params, headers=cls.HEADERS, timeout=5)
+            if data and isinstance(data, dict):
+                d = data.get("Data") or data.get("data") or data
+                return {
+                    "fund_name": d.get("FundName") or d.get("fundName") or fund_code,
+                    "management_company": d.get("ManagementCompany") or d.get("fundManager") or "N/A",
+                    "fund_type": d.get("FundType") or d.get("fundType") or "Quỹ mở",
+                    "latest_nav": d.get("Nav") or d.get("nav") or d.get("LatestNav"),
+                }
+        except Exception as e:
+            logger.warning(f"CafeF fund info error: {e}")
+        return {"fund_name": fund_code, "management_company": "N/A", "fund_type": "Quỹ mở"}
+
+
+class VCBFFundProvider(DataProvider):
+    """VCBF trực tiếp — cho các quỹ VCBF-BCF, VCBF-MGF, VCBF-TBF, VCBF-FIF"""
+    BASE_URL = "https://api.vcbf.com.vn"
+    HEADERS = {
+        **DataProvider.HEADERS,
+        "Referer": "https://www.vcbf.com.vn/",
+        "Origin": "https://www.vcbf.com.vn",
+    }
+    FUND_NAMES = {
+        "VCBF-BCF": "Quỹ Cân Bằng VCBF",
+        "VCBF-MGF": "Quỹ Đa Mục Tiêu VCBF",
+        "VCBF-TBF": "Quỹ Cân Bằng Mục Tiêu VCBF",
+        "VCBF-FIF": "Quỹ Thu Nhập Cố Định VCBF",
+    }
+
+    @classmethod
+    def get_nav_history(cls, fund_code: str, days: int = 500) -> Optional[pd.DataFrame]:
+        fund_code = fund_code.upper()
+        # Thử nhiều endpoint của VCBF
+        endpoints = [
+            f"{cls.BASE_URL}/api/FundNavReport/GetFundNavReportList",
+            f"{cls.BASE_URL}/api/FundNav/GetNavHistory",
+            f"https://www.vcbf.com.vn/api/nav/{fund_code}",
+            f"https://www.vcbf.com.vn/api/FundNavHistory/{fund_code}",
+        ]
+        params_list = [
+            {"fundCode": fund_code, "pageSize": 500, "pageIndex": 1},
+            {"fundCode": fund_code, "days": days},
+            {},
+            {},
+        ]
+        for url, params in zip(endpoints, params_list):
+            try:
+                data = cls.fetch(url, params=params, headers=cls.HEADERS, timeout=6)
+                if not data:
+                    continue
+                items = (data.get("data") or data.get("Data") or
+                         data.get("items") or data.get("Items") or
+                         (data if isinstance(data, list) else []))
+                if items and isinstance(items, list) and len(items) >= 5:
+                    df = pd.DataFrame(items)
+                    # Map cột linh hoạt
+                    for date_col in ["navDate", "NavDate", "date", "Date", "reportDate"]:
+                        if date_col in df.columns:
+                            df = df.rename(columns={date_col: "time"})
+                            break
+                    for nav_col in ["nav", "Nav", "navPerShare", "NavPerShare", "value"]:
+                        if nav_col in df.columns:
+                            df = df.rename(columns={nav_col: "Close"})
+                            break
+                    if "time" in df.columns and "Close" in df.columns:
+                        df["time"]  = pd.to_datetime(df["time"], errors="coerce")
+                        df["Close"] = pd.to_numeric(df["Close"], errors="coerce")
+                        df = df.dropna(subset=["time", "Close"]).sort_values("time").reset_index(drop=True)
+                        df["Open"]   = df["Close"].shift(1).fillna(df["Close"])
+                        df["High"]   = df["Close"] * 1.002
+                        df["Low"]    = df["Close"] * 0.998
+                        df["Volume"] = 0
+                        if len(df) >= 10:
+                            logger.info(f"VCBF: Fetched {len(df)} NAV rows for {fund_code}")
+                            return df
+            except Exception as e:
+                logger.warning(f"VCBF endpoint {url} error: {e}")
+        return None
+
+    @classmethod
+    def get_fund_info(cls, fund_code: str) -> dict:
+        return {
+            "fund_name": cls.FUND_NAMES.get(fund_code, fund_code),
+            "management_company": "Vietcombank Fund Management (VCBF)",
+            "fund_type": "Quỹ mở",
+            "latest_nav": None,
+        }
+
+
+class SSIAMFundProvider(DataProvider):
+    """SSIAM / Dragon Capital — cho VFMVSF, VFMVF1, SSIAM*, DCDS, etc."""
+    FUND_MAP = {
+        # Dragon Capital / VFM
+        "VFMVSF": {"id": "vfm-vf1", "name": "Quỹ VFM Vietnam Smart Select"},
+        "VFMVF1": {"id": "vfm-vf1", "name": "Quỹ VF1"},
+        "VFMVF4": {"id": "vfm-vf4", "name": "Quỹ VF4"},
+        "DCDS":   {"id": "dcds",    "name": "Dragon Capital Dragon Shield"},
+        # SSIAM
+        "SSISCA": {"id": "ssisca",  "name": "Quỹ SSIAM VN30 ETF"},
+        "SSIAMF": {"id": "ssiamf",  "name": "Quỹ SSIAM Balanced"},
+    }
+
+    @classmethod
+    def get_nav_history(cls, fund_code: str, days: int = 500) -> Optional[pd.DataFrame]:
+        fund_code = fund_code.upper()
+        fund_info = cls.FUND_MAP.get(fund_code)
+        endpoints = [
+            f"https://api.ssiam.vn/api/funds/{fund_code.lower()}/nav-history",
+            f"https://dragoncapital.com.vn/api/fund/{fund_code}/nav",
+            f"https://vfm.com.vn/api/nav/{fund_code}",
+        ]
+        for url in endpoints:
+            try:
+                data = cls.fetch(url, timeout=6)
+                if not data:
+                    continue
+                items = data.get("data") or data.get("items") or (data if isinstance(data, list) else [])
+                if items and len(items) >= 5:
+                    df = pd.DataFrame(items)
+                    for date_col in ["date", "navDate", "reportDate", "Date"]:
+                        if date_col in df.columns:
+                            df = df.rename(columns={date_col: "time"})
+                            break
+                    for nav_col in ["nav", "navValue", "value", "Nav"]:
+                        if nav_col in df.columns:
+                            df = df.rename(columns={nav_col: "Close"})
+                            break
+                    if "time" in df.columns and "Close" in df.columns:
+                        df["time"]  = pd.to_datetime(df["time"], errors="coerce")
+                        df["Close"] = pd.to_numeric(df["Close"], errors="coerce")
+                        df = df.dropna(subset=["time", "Close"]).sort_values("time").reset_index(drop=True)
+                        df["Open"]   = df["Close"].shift(1).fillna(df["Close"])
+                        df["High"]   = df["Close"] * 1.002
+                        df["Low"]    = df["Close"] * 0.998
+                        df["Volume"] = 0
+                        if len(df) >= 10:
+                            logger.info(f"SSIAM/Dragon: Fetched {len(df)} NAV rows for {fund_code}")
+                            return df
+            except Exception as e:
+                logger.warning(f"SSIAM endpoint {url} error: {e}")
+        return None
+
+
 class MSNProvider(DataProvider):
     FOREX_PAIRS = {
         "USD.VND": {"base": 25250, "volatility": 0.003},
@@ -720,6 +941,9 @@ class StockDataManager:
         self.vci = VCIProvider()
         self.yfinance = YFinanceProvider()
         self.fmarket = FMarketProvider()
+        self.cafef_fund = CafeFFundProvider()
+        self.vcbf_fund = VCBFFundProvider()
+        self.ssiam_fund = SSIAMFundProvider()
         self.msn = MSNProvider()
     
     def get_stock_data(self, symbol: str, days: int = 500) -> Tuple[Optional[pd.DataFrame], str, dict]:
@@ -752,18 +976,59 @@ class StockDataManager:
         logger.error(f"No data available for {symbol} from any source")
         return None, "NONE", {}
     
-    def get_fund_data(self, symbol: str, days: int = 365) -> Tuple[Optional[pd.DataFrame], dict, dict, List[dict], List[dict]]:
+    def get_fund_data(self, symbol: str, days: int = 500) -> Tuple[Optional[pd.DataFrame], dict, dict, List[dict], List[dict]]:
         symbol = symbol.upper().strip()
+        cached = _cache_get(f"fund:{symbol}")
+        if cached is not None:
+            logger.info(f"Cache hit for fund: {symbol}")
+            return cached
+
+        # ── Nguồn 1: FMarket (quỹ mở tổng hợp) ──────────────────────────
         fund_search = self.fmarket.search_fund(symbol)
-        if not fund_search:
-            logger.error(f"Fund not found: {symbol}")
-            return None, {}, {}, [], []
-        fund_id = fund_search.get("id") or fund_search.get("shortName") or symbol
-        df = self.fmarket.get_nav_history(fund_id, days)
-        info = self.fmarket.get_fund_info(fund_id)
-        holdings = self.fmarket.get_fund_holdings(fund_id)
-        allocation = self.fmarket.get_fund_industry_allocation(fund_id)
-        return df, info, fund_search, holdings, allocation
+        if fund_search:
+            fund_id = fund_search.get("id") or fund_search.get("shortName") or symbol
+            df = self.fmarket.get_nav_history(fund_id, days)
+            if df is not None and len(df) >= 10:
+                info     = self.fmarket.get_fund_info(fund_id)
+                holdings = self.fmarket.get_fund_holdings(fund_id)
+                alloc    = self.fmarket.get_fund_industry_allocation(fund_id)
+                result   = (df, info, fund_search, holdings, alloc)
+                _cache_set(f"fund:{symbol}", result)
+                return result
+            logger.info(f"FMarket found fund but no NAV data for {symbol}, trying other sources")
+
+        # ── Nguồn 2: VCBF trực tiếp (VCBF-BCF, VCBF-MGF, ...) ───────────
+        if symbol.startswith("VCBF"):
+            df = self.vcbf_fund.get_nav_history(symbol, days)
+            if df is not None and len(df) >= 10:
+                info   = self.vcbf_fund.get_fund_info(symbol)
+                result = (df, info, {"shortName": symbol}, [], [])
+                _cache_set(f"fund:{symbol}", result)
+                return result
+            logger.info(f"VCBF direct failed for {symbol}")
+
+        # ── Nguồn 3: SSIAM / Dragon Capital ──────────────────────────────
+        if symbol in SSIAMFundProvider.FUND_MAP:
+            df = self.ssiam_fund.get_nav_history(symbol, days)
+            if df is not None and len(df) >= 10:
+                info   = {"fund_name": SSIAMFundProvider.FUND_MAP[symbol]["name"],
+                          "management_company": "Dragon Capital / SSIAM",
+                          "fund_type": "Quỹ mở"}
+                result = (df, info, {"shortName": symbol}, [], [])
+                _cache_set(f"fund:{symbol}", result)
+                return result
+
+        # ── Nguồn 4: CafeF (fallback tổng hợp) ───────────────────────────
+        df = self.cafef_fund.get_nav_history(symbol, days)
+        if df is not None and len(df) >= 10:
+            info   = self.cafef_fund.get_fund_info(symbol)
+            result = (df, info, {"shortName": symbol}, [], [])
+            _cache_set(f"fund:{symbol}", result)
+            return result
+        logger.info(f"CafeF failed for {symbol}")
+
+        logger.error(f"No fund data from any source for {symbol}")
+        return None, {}, {}, [], []
     
     def get_forex_data(self, pair: str, days: int = 180) -> Tuple[Optional[pd.DataFrame], str]:
         pair = pair.upper().strip()
@@ -1315,7 +1580,12 @@ Dự báo Linear: {forecast.get('direction','N/A')} | Mục tiêu: {forecast.get
         return result
     
     def _call_ai(self, system_prompt: str, user_prompt: str, symbol: str) -> dict:
-        models = ["llama-3.3-70b-versatile", "llama3-70b-8192", "mixtral-8x7b-32768"]
+        models = [
+            "llama-3.3-70b-versatile",      # Primary — tốt nhất
+            "llama-3.1-70b-versatile",       # Fallback 70B
+            "llama-3.1-8b-instant",          # Nhanh, ít token — fallback khi TPD hết
+            "gemma2-9b-it",                  # Google Gemma — fallback cuối
+        ]
         for model in models:
             try:
                 resp = self.client.chat.completions.create(
@@ -1497,18 +1767,20 @@ class Orchestrator:
         sym = symbol.upper()
         df, info, search, holdings, allocation = self.data_mgr.get_fund_data(sym)
         if df is None:
-            # Fallback: ETFs like E1VFVN30 trade on exchanges like stocks — try stock path
-            logger.info(f"Fund not on FMarket, trying stock fallback for {sym}")
+            # Fallback: ETF giao dịch như cổ phiếu → thử stock path
+            logger.info(f"Fund not found, trying stock fallback for {sym}")
             try:
                 return self.analyze_stock(sym)
             except Exception:
                 pass
-            return self._error_response(sym, "fund", 
-                f"Không lấy được dữ liệu cho {sym}.\n\n"
-                f"**Nguyên nhân có thể:**\n"
-                f"- Nếu là quỹ mở (VCBF-BCF, VFMVSF, SSISCA...): FMarket API bị chặn từ server nước ngoài\n"
-                f"- Nếu là ETF (E1VFVN30...): hãy chọn loại **Cổ phiếu** thay vì Quỹ\n"
-                f"- Mã không tồn tại hoặc chưa được hỗ trợ"
+            return self._error_response(sym, "fund",
+                f"Không lấy được dữ liệu NAV cho **{sym}** từ bất kỳ nguồn nào.\n\n"
+                f"**Đã thử:** FMarket → VCBF Direct → SSIAM/Dragon → CafeF → Stock Exchange\n\n"
+                f"**Gợi ý:**\n"
+                f"- ETF (E1VFVN30, FUEVFVND...): chọn loại **Cổ phiếu** thay vì Quỹ\n"
+                f"- Quỹ mở bị chặn từ server nước ngoài (FMarket, VCBF API region-locked)\n"
+                f"- Kiểm tra lại mã: ví dụ `VCBF-MGF`, `VFMVSF`, `SSISCA`\n"
+                f"- Thử lại sau vài phút"
             )
         
         tech, charts = self.ta.analyze(df)
