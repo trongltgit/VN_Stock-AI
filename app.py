@@ -16,6 +16,7 @@ warnings.filterwarnings("ignore")
 import requests
 import pandas as pd
 import numpy as np
+import yfinance as yf
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -36,7 +37,7 @@ logger = logging.getLogger(__name__)
 # ══════════════════════════════════════════════════════════════════════
 
 class Config:
-    STOCK_SOURCES = ['TCBS', 'VCI', 'VNDIRECT']
+    STOCK_SOURCES = ['TCBS', 'VCI', 'VNDIRECT', 'YFINANCE']
     FUND_SOURCE = 'FMARKET'
     FOREX_SOURCE = 'MSN'
     
@@ -360,15 +361,116 @@ class VNDirectProvider(DataProvider):
             return {}
 
 
+class YFinanceProvider:
+    """Yahoo Finance — global fallback, không bị block IP, hỗ trợ cổ phiếu VN (.VN suffix)"""
+
+    # Một số mã HNX cần suffix .HN thay vì .VN
+    HNX_SYMBOLS = {"SHB", "ACB", "PVS", "VCS", "CEO", "HUT", "NTP", "PVI", "SHS", "VGC"}
+
+    @classmethod
+    def _ticker(cls, symbol: str) -> str:
+        symbol = symbol.upper().strip()
+        if symbol in cls.HNX_SYMBOLS:
+            return f"{symbol}.HN"
+        return f"{symbol}.VN"
+
+    @classmethod
+    def get_historical(cls, symbol: str, days: int = 500) -> Optional[pd.DataFrame]:
+        try:
+            ticker = cls._ticker(symbol)
+            period = f"{min(days // 365 + 1, 5)}y"
+            df = yf.download(ticker, period=period, interval="1d", progress=False, auto_adjust=True)
+            if df is None or len(df) < 30:
+                # thử suffix còn lại
+                alt = f"{symbol}.HN" if ticker.endswith(".VN") else f"{symbol}.VN"
+                df = yf.download(alt, period=period, interval="1d", progress=False, auto_adjust=True)
+            if df is None or len(df) < 30:
+                return None
+            df = df.reset_index()
+            df = df.rename(columns={"Date": "time", "Open": "Open", "High": "High",
+                                    "Low": "Low", "Close": "Close", "Volume": "Volume"})
+            df["time"] = pd.to_datetime(df["time"])
+            # Giá Yahoo Finance của cổ VN thường tính bằng nghìn đồng, nhân lại
+            for col in ["Open", "High", "Low", "Close"]:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
+                    # Nếu giá < 1000 thì đang ở đơn vị nghìn đồng, nhân 1000
+                    median_price = df[col].median()
+                    if median_price < 1000:
+                        df[col] = df[col] * 1000
+            df["Volume"] = pd.to_numeric(df.get("Volume", 0), errors="coerce").fillna(0)
+            df = df.dropna(subset=["Close"]).sort_values("time").reset_index(drop=True)
+            logger.info(f"YFinance: Fetched {len(df)} bars for {symbol} ({ticker})")
+            return df
+        except Exception as e:
+            logger.warning(f"YFinance error for {symbol}: {e}")
+            return None
+
+    @classmethod
+    def get_fundamental(cls, symbol: str) -> dict:
+        try:
+            ticker = cls._ticker(symbol)
+            info = yf.Ticker(ticker).info or {}
+            return {
+                "pe": info.get("trailingPE") or info.get("forwardPE"),
+                "pb": info.get("priceToBook"),
+                "eps": info.get("trailingEps"),
+                "beta": info.get("beta"),
+                "market_cap": info.get("marketCap"),
+                "industry": info.get("industry") or info.get("sector"),
+                "exchange": info.get("exchange"),
+                "company_name": info.get("longName") or info.get("shortName"),
+                "52w_high": info.get("fiftyTwoWeekHigh"),
+                "52w_low": info.get("fiftyTwoWeekLow"),
+                "avg_volume": info.get("averageVolume"),
+                "dividend_yield": info.get("dividendYield"),
+            }
+        except Exception as e:
+            logger.warning(f"YFinance fundamental error for {symbol}: {e}")
+            return {}
+
+
 class FMarketProvider(DataProvider):
     BASE_URL = "https://api.fmarket.vn"
+    HEADERS = {
+        **DataProvider.HEADERS,
+        "Referer": "https://fmarket.vn/",
+        "Origin": "https://fmarket.vn",
+    }
     
     @classmethod
     def search_fund(cls, query: str) -> Optional[dict]:
         try:
-            url = f"{cls.BASE_URL}/api/search"
+            # Thử POST endpoint mới của FMarket
+            url = f"{cls.BASE_URL}/res/product/filter"
+            body = {
+                "types": ["NEW_FUND", "TRADING_FUND"],
+                "issuerIds": [],
+                "sortOrder": "DESC",
+                "sortField": "navTo6Months",
+                "page": 1,
+                "pageSize": 100,
+                "isIpo": False,
+                "fundAssetTypes": [],
+                "bondRemainDays": [],
+                "searchKey": query,
+            }
+            h = {**cls.HEADERS, "Content-Type": "application/json"}
+            r = requests.post(url, json=body, headers=h, timeout=Config.TIMEOUT_SHORT)
+            if r.status_code == 200:
+                data = r.json()
+                rows = data.get("data", {}).get("rows") or []
+                if rows:
+                    # Tìm match chính xác trước
+                    for row in rows:
+                        code = (row.get("shortName") or row.get("code") or "").upper()
+                        if code == query.upper():
+                            return row
+                    return rows[0]
+            # Fallback GET search cũ
+            url2 = f"{cls.BASE_URL}/api/search"
             params = {"q": query, "type": "fund"}
-            data = cls.fetch(url, params=params, timeout=Config.TIMEOUT_SHORT)
+            data = cls.fetch(url2, params=params, timeout=Config.TIMEOUT_SHORT)
             if not data:
                 return None
             rows = data.get("data", {}).get("rows") or data.get("data") or []
@@ -541,6 +643,7 @@ class StockDataManager:
         self.tcbs = TCBSProvider()
         self.vci = VCIProvider()
         self.vndirect = VNDirectProvider()
+        self.yfinance = YFinanceProvider()
         self.fmarket = FMarketProvider()
         self.msn = MSNProvider()
     
@@ -561,6 +664,11 @@ class StockDataManager:
         if df is not None and len(df) >= 30:
             fund = self.vndirect.get_fundamental(symbol)
             return df, "VNDirect", fund
+        logger.info(f"Falling back to YFinance for {symbol}")
+        df = self.yfinance.get_historical(symbol, days)
+        if df is not None and len(df) >= 30:
+            fund = self.yfinance.get_fundamental(symbol)
+            return df, "YFinance", fund
         logger.error(f"No data available for {symbol} from any source")
         return None, "NONE", {}
     
@@ -1426,7 +1534,7 @@ def health():
         "timestamp": datetime.now().isoformat(),
         "ai": orc.ai.client is not None,
         "forecast": "Linear Regression + Technical Features",
-        "data_sources": ["TCBS", "VCI", "VNDirect", "FMarket", "MSN"],
+        "data_sources": ["TCBS", "VCI", "VNDirect", "YFinance", "FMarket", "MSN"],
     })
 
 if __name__ == "__main__":
