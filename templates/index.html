@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>VN Stock AI v6.0 — Professional Deep Learning Analysis</title>
+<title>VN Stock AI v6.1 — Professional Multi-Asset Analysis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://unpkg.com/lightweight-charts@5.0.0/dist/lightweight-charts.standalone.production.js"></script>
@@ -313,7 +313,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
     <div class="logo-mark">📈</div>
     <div>
       <div class="logo-text">VN<em>Stock</em>AI</div>
-      <div class="logo-sub">v6.0 · LSTM Deep Learning · Real Data</div>
+      <div class="logo-sub">v6.1 · Linear Forecast · Real Data</div>
     </div>
   </div>
 
@@ -385,7 +385,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
     <button class="tb-btn" id="btnEMA" onclick="toggleInd('ema',this)" title="EMA 9/21/50">EMA</button>
     <button class="tb-btn" id="btnIchi" onclick="toggleInd('ichi',this)" title="Ichimoku">ICHI</button>
     <button class="tb-btn" id="btnVWAP" onclick="toggleInd('vwap',this)" title="VWAP">VWAP</button>
-    <button class="tb-btn active" id="btnForecast" onclick="toggleInd('forecast',this)" title="LSTM Forecast">🧠 AI</button>
+    <button class="tb-btn active" id="btnForecast" onclick="toggleInd('forecast',this)" title="Linear Forecast">🧠 AI</button>
   </div>
   <div class="tool-group">
     <span class="tb-label">SUB</span>
@@ -513,11 +513,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
       <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:20;pointer-events:none" id="chartOverlayWrap">
         <div id="welcome">
           <div class="w-icon">📊</div>
-          <div class="w-title">VN Stock AI v6.0</div>
-          <p class="w-desc">Nhập mã cổ phiếu và bấm Phân tích để bắt đầu phân tích chuyên sâu với LSTM Deep Learning + Real Market Data</p>
+          <div class="w-title">VN Stock AI v6.1</div>
+          <p class="w-desc">Nhập mã cổ phiếu và bấm Phân tích để bắt đầu phân tích chuyên sâu với Linear Regression + Real Market Data</p>
           <div class="feat-list">
-            <div class="feat"><div class="feat-ic">🧠</div><div><div class="feat-title">LSTM Deep Learning</div><div class="feat-desc">Bidirectional LSTM + Attention với Monte Carlo Dropout cho dự báo chính xác</div></div></div>
-            <div class="feat"><div class="feat-ic">📡</div><div><div class="feat-title">Real Market Data</div><div class="feat-desc">KBS → VCI → FMarket → MSN. Dữ liệu thực, không mock, không fallback giả</div></div></div>
+            <div class="feat"><div class="feat-ic">🧠</div><div><div class="feat-title">Linear Forecast</div><div class="feat-desc">Linear Regression + Technical Features với R² validation cho dự báo chính xác</div></div></div>
+            <div class="feat"><div class="feat-ic">📡</div><div><div class="feat-title">Real Market Data</div><div class="feat-desc">TCBS → VCI → FMarket → MSN. Dữ liệu thực, không mock, không fallback giả</div></div></div>
             <div class="feat"><div class="feat-ic">📊</div><div><div class="feat-title">Interactive Chart</div><div class="feat-desc">Vẽ trend line, Fibonacci, rectangle, text annotation như TradingView</div></div></div>
             <div class="feat"><div class="feat-ic">📋</div><div><div class="feat-title">VCBS-Style Reports</div><div class="feat-desc">Entry, SL, TP cụ thể. P/E, P/B, ROE. Kịch bản Bull/Base/Bear</div></div></div>
           </div>
@@ -525,11 +525,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
         <div id="loading">
           <div class="spin-wrap"><div class="ring1"></div><div class="ring2"></div></div>
           <div class="load-text" id="loadText">Đang phân tích...</div>
-          <div class="load-sub">LSTM Deep Learning v6.0 · Real Data</div>
+          <div class="load-sub">Linear Regression v6.1 · Real Data</div>
           <div class="load-steps">
-            <div class="lstep" id="ls1">📡 Lấy dữ liệu KBS/VCI/FMarket...</div>
+            <div class="lstep" id="ls1">📡 Lấy dữ liệu TCBS/VCI/FMarket...</div>
             <div class="lstep" id="ls2">📊 Tính 30+ chỉ báo kỹ thuật...</div>
-            <div class="lstep" id="ls3">🧠 Training LSTM Neural Network...</div>
+            <div class="lstep" id="ls3">🧠 Training Linear Regression...</div>
             <div class="lstep" id="ls4">📐 Monte Carlo Forecasting...</div>
             <div class="lstep" id="ls5">🤖 AI phân tích đa chiều...</div>
             <div class="lstep" id="ls6">📋 Tổng hợp báo cáo VCBS...</div>
@@ -762,7 +762,6 @@ function initCharts(){
       }
     }
     if(drawTool === 'fib' && param.price !== undefined){
-      // Simplified Fibonacci - draw retracement levels
       const price = param.price;
       const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
       levels.forEach(lvl => {
@@ -783,7 +782,6 @@ function initCharts(){
         drawState = {price:param.price, time:param.time};
         toast('🎯 Chọn góc đối diện', 'info');
       } else {
-        // Rectangle using two horizontal lines
         const top = Math.max(drawState.price, param.price);
         const bottom = Math.min(drawState.price, param.price);
         const pl1 = mainSeries.createPriceLine({price:top, color:'#9b7fe8', lineWidth:1, lineStyle:2, axisLabelVisible:false});
@@ -933,7 +931,7 @@ function renderReport(data){
   const fc = data.forecast || {};
   const tech = data.technical || {};
   const priceCount = (data.ohlcv||[]).length;
-  const source = data.source || 'KBS';
+  const source = data.source || 'TCBS';
 
   let html = `
   <div class="report-wrap">
@@ -972,12 +970,12 @@ function renderForecast(data){
   const html = `
   <div class="fc-panel">
     <div class="fc-card">
-      <div class="fc-card-title">🧠 ${fc.method||'LSTM Deep Learning'}</div>
+      <div class="fc-card-title">🧠 ${fc.method||'Linear Regression'}</div>
       <div class="fc-grid">
         <div class="fc-item"><div class="fc-item-l">Xu hướng</div><div class="fc-item-v ${isUp?'up':'dn'}">${isUp?'▲ TĂNG':'▼ GIẢM'}</div></div>
         <div class="fc-item"><div class="fc-item-l">Độ tin cậy</div><div class="fc-item-v">${fc.confidence||'--'}</div></div>
         <div class="fc-item"><div class="fc-item-l">R² (Validation)</div><div class="fc-item-v">${fc.r_squared||'--'}</div></div>
-        <div class="fc-item"><div class="fc-item-l">Model</div><div class="fc-item-v">✅ LSTM</div></div>
+        <div class="fc-item"><div class="fc-item-l">Model</div><div class="fc-item-v">✅ Linear</div></div>
       </div>
     </div>
     <div class="fc-card">
@@ -998,11 +996,11 @@ function renderForecast(data){
         <div class="fc-item"><div class="fc-item-l">Expected Return</div><div class="fc-item-v">${fc.expected_return_2w||'--'}%</div></div>
       </div>
     </div>
-    ${fc.forecast_5d && fc.forecast_5d.length ? `
+    ${fc.forecast && fc.forecast.length ? `
     <div class="fc-card">
-      <div class="fc-card-title">📅 Dự báo 5 phiên tới</div>
+      <div class="fc-card-title">📅 Dự báo 10 phiên tới</div>
       <div style="display:flex;gap:4px;flex-wrap:wrap">
-        ${fc.forecast_5d.map((v,i)=>`<div class="fc-item" style="flex:1;min-width:60px"><div class="fc-item-l">T+${i+1}</div><div class="fc-item-v" style="font-size:.76rem">${fmtN(v)}</div></div>`).join('')}
+        ${fc.forecast.map((v,i)=>`<div class="fc-item" style="flex:1;min-width:60px"><div class="fc-item-l">T+${i+1}</div><div class="fc-item-v" style="font-size:.76rem">${fmtN(v)}</div></div>`).join('')}
       </div>
     </div>` : ''}
   </div>`;
@@ -1079,13 +1077,6 @@ function renderTechData(tech){
     ['Kháng cự 1', fmtN(tech.resistance1), 'dn'],
     ['Kháng cự 2', fmtN(tech.resistance2), 'dn'],
     ['Kháng cự 3', fmtN(tech.resistance3), 'dn'],
-    ['Pivot', fmtN(tech.pivot), ''],
-    ['Pivot R1', fmtN(tech.pivot_r1), 'dn'],
-    ['Pivot S1', fmtN(tech.pivot_s1), 'up'],
-    ['Fib 23.6%', fmtN(tech.fib_236), ''],
-    ['Fib 38.2%', fmtN(tech.fib_382), ''],
-    ['Fib 50%', fmtN(tech.fib_500), ''],
-    ['Fib 61.8%', fmtN(tech.fib_618), ''],
     ['Trend NH', tech.trend_short, tech.trend_short==='TĂNG'?'up':'dn'],
     ['Trend TH', tech.trend_medium, tech.trend_medium==='TĂNG'?'up':'dn'],
     ['Trend DH', tech.trend_long, tech.trend_long==='TĂNG'?'up':'dn'],
@@ -1125,7 +1116,7 @@ async function startAnalysis(){
     renderForecast(apiData);
     renderFundamental(apiData);
     renderTechData(apiData.technical || {});
-    toast('✅ Phân tích xong: ' + sym + ' · ' + (apiData.source||'KBS'), 'ok');
+    toast('✅ Phân tích xong: ' + sym + ' · ' + (apiData.source||'TCBS'), 'ok');
 
   } catch(err){
     showError(err.message);
@@ -1338,35 +1329,35 @@ function evalROE(v){ const n=parseFloat(v); if(isNaN(n)) return ''; return n>20?
 
 function mdToHtml(t){
   if(!t) return '';
-  t = t.replace(/<think[\\s\\S]*?<\\/think>/gi,'');
-  t = t.replace(/^######\\s+(.+)$/gm,'<h3>$1</h3>');
-  t = t.replace(/^#####\\s+(.+)$/gm,'<h3>$1</h3>');
-  t = t.replace(/^####\\s+(.+)$/gm,'<h3>$1</h3>');
-  t = t.replace(/^###\\s+(.+)$/gm,'<h3>$1</h3>');
-  t = t.replace(/^##\\s+(.+)$/gm,'<h2>$1</h2>');
-  t = t.replace(/^#\\s+(.+)$/gm,'<h1>$1</h1>');
+  t = t.replace(/<think[\s\S]*?<\/think>/gi,'');
+  t = t.replace(/^######\s+(.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^#####\s+(.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^####\s+(.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^###\s+(.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^##\s+(.+)$/gm,'<h2>$1</h2>');
+  t = t.replace(/^#\s+(.+)$/gm,'<h1>$1</h1>');
   t = t.replace(/^---+$/gm,'<hr>');
-  t = t.replace(/\\*\\*\\*(.+?)\\*\\*\\*/g,'<strong><em>$1</em></strong>');
-  t = t.replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>');
-  t = t.replace(/\\*(.+?)\\*/g,'<em>$1</em>');
+  t = t.replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>');
+  t = t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  t = t.replace(/\*(.+?)\*/g,'<em>$1</em>');
   t = t.replace(/`([^`]+)`/g,'<code>$1</code>');
-  t = t.replace(/^>\\s+(.+)$/gm,'<blockquote>$1</blockquote>');
-  t = t.replace(/^[-*•]\\s+(.+)$/gm,'<li>$1</li>');
-  t = t.replace(/^\\d+\\.\\s+(.+)$/gm,'<li>$1</li>');
-  t = t.replace(/(<li>.*<\\/li>\\n?)+/g, m => '<ul>'+m+'</ul>');
-  t = t.replace(/^\\|(.+)\\|$/gm, m => {
+  t = t.replace(/^>\s+(.+)$/gm,'<blockquote>$1</blockquote>');
+  t = t.replace(/^[-*•]\s+(.+)$/gm,'<li>$1</li>');
+  t = t.replace(/^\d+\.\s+(.+)$/gm,'<li>$1</li>');
+  t = t.replace(/(<li>.*<\/li>\n?)+/g, m => '<ul>'+m+'</ul>');
+  t = t.replace(/^\|(.+)\|$/gm, m => {
     if(m.includes('---')) return '';
     const cells = m.slice(1,-1).split('|').map(c=>c.trim());
     return '<tr>'+cells.map(c=>`<td>${c}</td>`).join('')+'</tr>';
   });
-  t = t.replace(/(<tr>.*<\\/tr>\\n?)+/g, m => '<table>'+m+'</table>');
-  const lines = t.split('\\n');
+  t = t.replace(/(<tr>.*<\/tr>\n?)+/g, m => '<table>'+m+'</table>');
+  const lines = t.split('\n');
   return lines.map(l => {
     const trim = l.trim();
     if(!trim) return '';
     if(trim.match(/^<(h[1-6]|ul|ol|li|hr|blockquote|table|tr|td|th|p|div)/i)) return trim;
     return `<p>${trim}</p>`;
-  }).join('\\n');
+  }).join('\n');
 }
 
 document.getElementById('symInput').addEventListener('keydown', e => {
