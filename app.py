@@ -364,41 +364,53 @@ class VNDirectProvider(DataProvider):
 class YFinanceProvider:
     """Yahoo Finance — global fallback, không bị block IP, hỗ trợ cổ phiếu VN (.VN suffix)"""
 
-    # Một số mã HNX cần suffix .HN thay vì .VN
     HNX_SYMBOLS = {"SHB", "ACB", "PVS", "VCS", "CEO", "HUT", "NTP", "PVI", "SHS", "VGC"}
 
     @classmethod
     def _ticker(cls, symbol: str) -> str:
         symbol = symbol.upper().strip()
-        if symbol in cls.HNX_SYMBOLS:
-            return f"{symbol}.HN"
-        return f"{symbol}.VN"
+        return f"{symbol}.HN" if symbol in cls.HNX_SYMBOLS else f"{symbol}.VN"
+
+    @classmethod
+    def _flatten(cls, df: pd.DataFrame) -> pd.DataFrame:
+        """Flatten MultiIndex columns từ yfinance >= 0.2.x"""
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = [col[0] for col in df.columns]
+        return df
+
+    @classmethod
+    def _download(cls, ticker: str, period: str) -> Optional[pd.DataFrame]:
+        try:
+            df = yf.download(ticker, period=period, interval="1d",
+                             progress=False, auto_adjust=True)
+            if df is not None and len(df) >= 30:
+                return cls._flatten(df)
+        except Exception:
+            pass
+        return None
 
     @classmethod
     def get_historical(cls, symbol: str, days: int = 500) -> Optional[pd.DataFrame]:
         try:
-            ticker = cls._ticker(symbol)
             period = f"{min(days // 365 + 1, 5)}y"
-            df = yf.download(ticker, period=period, interval="1d", progress=False, auto_adjust=True)
+            ticker = cls._ticker(symbol)
+            df = cls._download(ticker, period)
             if df is None or len(df) < 30:
-                # thử suffix còn lại
                 alt = f"{symbol}.HN" if ticker.endswith(".VN") else f"{symbol}.VN"
-                df = yf.download(alt, period=period, interval="1d", progress=False, auto_adjust=True)
+                df = cls._download(alt, period)
             if df is None or len(df) < 30:
                 return None
             df = df.reset_index()
-            df = df.rename(columns={"Date": "time", "Open": "Open", "High": "High",
-                                    "Low": "Low", "Close": "Close", "Volume": "Volume"})
+            # Đổi tên cột — sau flatten còn: Date/Datetime, Open, High, Low, Close, Volume
+            df = df.rename(columns={"Date": "time", "Datetime": "time"})
             df["time"] = pd.to_datetime(df["time"])
-            # Giá Yahoo Finance của cổ VN thường tính bằng nghìn đồng, nhân lại
             for col in ["Open", "High", "Low", "Close"]:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors="coerce")
-                    # Nếu giá < 1000 thì đang ở đơn vị nghìn đồng, nhân 1000
                     median_price = df[col].median()
-                    if median_price < 1000:
-                        df[col] = df[col] * 1000
-            df["Volume"] = pd.to_numeric(df.get("Volume", 0), errors="coerce").fillna(0)
+                    if pd.notna(median_price) and median_price < 1000:
+                        df[col] = df[col] * 1000  # đơn vị nghìn đồng → đồng
+            df["Volume"] = pd.to_numeric(df["Volume"], errors="coerce").fillna(0) if "Volume" in df.columns else 0
             df = df.dropna(subset=["Close"]).sort_values("time").reset_index(drop=True)
             logger.info(f"YFinance: Fetched {len(df)} bars for {symbol} ({ticker})")
             return df
@@ -441,32 +453,45 @@ class FMarketProvider(DataProvider):
     @classmethod
     def search_fund(cls, query: str) -> Optional[dict]:
         try:
-            # Thử POST endpoint mới của FMarket
+            query = query.upper().strip()
+            # POST endpoint mới của FMarket (2024+)
             url = f"{cls.BASE_URL}/res/product/filter"
-            body = {
-                "types": ["NEW_FUND", "TRADING_FUND"],
-                "issuerIds": [],
-                "sortOrder": "DESC",
-                "sortField": "navTo6Months",
-                "page": 1,
-                "pageSize": 100,
-                "isIpo": False,
-                "fundAssetTypes": [],
-                "bondRemainDays": [],
-                "searchKey": query,
-            }
-            h = {**cls.HEADERS, "Content-Type": "application/json"}
-            r = requests.post(url, json=body, headers=h, timeout=Config.TIMEOUT_SHORT)
-            if r.status_code == 200:
-                data = r.json()
-                rows = data.get("data", {}).get("rows") or []
-                if rows:
-                    # Tìm match chính xác trước
-                    for row in rows:
-                        code = (row.get("shortName") or row.get("code") or "").upper()
-                        if code == query.upper():
-                            return row
-                    return rows[0]
+            # Thử với query gốc, sau đó prefix 3 ký tự đầu
+            for search_key in [query, query[:3]]:
+                body = {
+                    "types": ["NEW_FUND", "TRADING_FUND"],
+                    "issuerIds": [],
+                    "sortOrder": "DESC",
+                    "sortField": "navTo6Months",
+                    "page": 1,
+                    "pageSize": 100,
+                    "isIpo": False,
+                    "fundAssetTypes": [],
+                    "bondRemainDays": [],
+                    "searchKey": search_key,
+                }
+                h = {**cls.HEADERS, "Content-Type": "application/json"}
+                try:
+                    r = requests.post(url, json=body, headers=h, timeout=Config.TIMEOUT_SHORT)
+                    if r.status_code == 200:
+                        data = r.json()
+                        rows = (data.get("data") or {}).get("rows") or []
+                        if rows:
+                            # Ưu tiên match chính xác shortName
+                            for row in rows:
+                                code = (row.get("shortName") or row.get("code") or "").upper()
+                                if code == query:
+                                    return row
+                            # Match tên chứa query
+                            for row in rows:
+                                name = (row.get("name") or row.get("fundName") or "").upper()
+                                code = (row.get("shortName") or row.get("code") or "").upper()
+                                if query in name or query in code:
+                                    return row
+                            if search_key == query:
+                                return rows[0]
+                except Exception:
+                    pass
             # Fallback GET search cũ
             url2 = f"{cls.BASE_URL}/api/search"
             params = {"q": query, "type": "fund"}
