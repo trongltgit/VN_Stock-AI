@@ -1863,6 +1863,128 @@ orc = Orchestrator()
 def index():
     return render_template("index.html")
 
+# ── Cache giá live riêng — TTL 20 giây ──────────────────────────────
+_quote_cache: dict = {}
+_quote_lock  = _threading.Lock()
+
+def _qcache_get(sym: str):
+    with _quote_lock:
+        e = _quote_cache.get(sym)
+        if e and (time.time() - e["ts"]) < 20:
+            return e["val"]
+    return None
+
+def _qcache_set(sym: str, val):
+    with _quote_lock:
+        _quote_cache[sym] = {"val": val, "ts": time.time()}
+
+def _fetch_single_quote(sym: str) -> dict:
+    """Lấy giá nhanh cho 1 mã — TCBS → VCI → YFinance (chỉ last close)"""
+    cached = _qcache_get(sym)
+    if cached:
+        return cached
+
+    display_sym = sym  # tên hiện thị
+
+    # Map VN-INDEX → VNINDEX cho TCBS
+    tcbs_sym = "VNINDEX" if sym in ("VN-INDEX", "VNINDEX") else sym
+
+    # ── TCBS quote ────────────────────────────────────────────────────
+    try:
+        url = "https://apipubaws.tcbs.com.vn/stock-insight/v1/stock/quote"
+        r = requests.get(url, params={"ticker": tcbs_sym},
+                         headers=TCBSProvider.HEADERS, timeout=4)
+        if r.status_code == 200:
+            d = r.json().get("data") or r.json()
+            if isinstance(d, list):
+                d = d[0] if d else {}
+            price = (d.get("price") or d.get("close") or
+                     d.get("lastPrice") or d.get("c"))
+            chg_pct = (d.get("changePercent") or d.get("delta_pct") or
+                       d.get("priceChangePercent") or d.get("changePc"))
+            chg     = (d.get("change") or d.get("delta") or
+                       d.get("priceChange"))
+            if price:
+                result = {
+                    "sym": display_sym,
+                    "price": float(price),
+                    "change": float(chg or 0),
+                    "change_pct": float(chg_pct or 0),
+                    "src": "TCBS"
+                }
+                _qcache_set(sym, result)
+                return result
+    except Exception:
+        pass
+
+    # ── VCI quote ─────────────────────────────────────────────────────
+    try:
+        url2 = f"https://api.vietcap.com.vn/api/v1/stock/{tcbs_sym}/overview"
+        r2 = requests.get(url2, headers=VCIProvider.HEADERS, timeout=4)
+        if r2.status_code == 200:
+            d2 = r2.json().get("data") or r2.json()
+            price = d2.get("lastPrice") or d2.get("close") or d2.get("price")
+            chg_pct = d2.get("priceChangePercent") or d2.get("changePercent") or 0
+            if price:
+                result = {
+                    "sym": display_sym,
+                    "price": float(price),
+                    "change": float(d2.get("priceChange") or 0),
+                    "change_pct": float(chg_pct or 0),
+                    "src": "VCI"
+                }
+                _qcache_set(sym, result)
+                return result
+    except Exception:
+        pass
+
+    # ── YFinance last close (chậm hơn, dùng làm last resort) ──────────
+    try:
+        yf_sym = YFinanceProvider.INDEX_MAP.get(sym, f"{sym}.VN")
+        ticker = yf.Ticker(yf_sym)
+        hist = ticker.history(period="2d", interval="1d")
+        if hist is not None and len(hist) >= 1:
+            close = float(hist["Close"].iloc[-1])
+            prev  = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else close
+            chg   = close - prev
+            chg_pct = (chg / prev * 100) if prev else 0
+            result = {
+                "sym": display_sym,
+                "price": close,
+                "change": chg,
+                "change_pct": chg_pct,
+                "src": "YF"
+            }
+            _qcache_set(sym, result)
+            return result
+    except Exception:
+        pass
+
+    return {"sym": display_sym, "price": None, "change": 0, "change_pct": 0, "src": "err"}
+
+
+@app.route("/api/quotes", methods=["GET"])
+def quotes():
+    """Endpoint giá live nhanh — được gọi mỗi 30s từ ticker bar"""
+    raw     = request.args.get("syms", "VN-INDEX,VCB,HPG,FPT,VHM,TCB,MBB")
+    symbols = [s.strip().upper() for s in raw.split(",") if s.strip()]
+    symbols = symbols[:20]  # tối đa 20 mã
+
+    results = {}
+    # Fetch song song để nhanh
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    with ThreadPoolExecutor(max_workers=min(len(symbols), 8)) as ex:
+        futures = {ex.submit(_fetch_single_quote, sym): sym for sym in symbols}
+        for fut in as_completed(futures, timeout=6):
+            sym = futures[fut]
+            try:
+                results[sym] = fut.result()
+            except Exception:
+                results[sym] = {"sym": sym, "price": None, "change": 0, "change_pct": 0}
+
+    return jsonify({"quotes": results, "ts": datetime.now().isoformat()})
+
+
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
     try:
