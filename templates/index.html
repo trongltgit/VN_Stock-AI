@@ -2,1201 +2,1383 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>VN Stock AI v6 — Terminal Chuyên Nghiệp</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VN Stock AI v6.0 — Professional Deep Learning Analysis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
-<script src="https://unpkg.com/lightweight-charts@4.1.7/dist/lightweight-charts.standalone.production.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/lightweight-charts@5.0.0/dist/lightweight-charts.standalone.production.js"></script>
 <style>
 :root{
-  --bg:    #050b12; --bg2:#090f1b; --bg3:#0d1525; --bg4:#111d33;
-  --b:     #1a2d44; --b2:#243e5a;  --b3:#2e5070;
-  --a:     #0cd4f7; --a2:#0097c7;  --a3:rgba(12,212,247,.08);
-  --gold:  #f0b429; --gd2:rgba(240,180,41,.1);
-  --green: #00e67a; --gn2:rgba(0,230,122,.1);
-  --red:   #f04060; --rd2:rgba(240,64,96,.1);
-  --pur:   #a78bfa; --ora:#ff9240;
-  --t:     #d6ecff; --t2:#6e9cc0; --t3:#3a5570; --t4:#1d3350;
-  --card:  rgba(9,15,27,.98); --r:8px;
-  --shadow:0 8px 40px rgba(0,0,0,.6);
-  --glow:  0 0 20px rgba(12,212,247,.12);
+  --bg:#030810;--bg2:#080f1c;--bg3:#0d1929;--bg4:#111f33;
+  --border:#192b44;--border2:#223a5a;--border3:#2d4f78;
+  --accent:#00c8f5;--accent2:#0095c8;--accent3:rgba(0,200,245,.08);
+  --gold:#edb84a;--gold2:rgba(237,184,74,.1);
+  --green:#00d97e;--green2:rgba(0,217,126,.1);
+  --red:#f04060;--red2:rgba(240,64,96,.1);
+  --yellow:#ffcc00;--purple:#9b7fe8;--orange:#ff8c42;--pink:#f06292;
+  --text:#ddeeff;--text2:#7a9cbf;--text3:#3d5a7a;--text4:#1e3349;
+  --card:rgba(8,15,28,.97);--radius:10px;
+  --shadow:0 8px 32px rgba(0,0,0,.5);
+  --glow:0 0 24px rgba(0,200,245,.1);
 }
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--t);font-family:'Space Grotesk',sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(ellipse 90% 60% at 15% -5%,rgba(12,212,247,.05) 0,transparent 65%),
-             radial-gradient(ellipse 60% 40% at 85% 105%,rgba(240,180,41,.03) 0,transparent 60%)}
+  background-image:radial-gradient(ellipse 80% 50% at 20% -10%, rgba(0,200,245,.05) 0%,transparent 60%),
+                   radial-gradient(ellipse 60% 40% at 80% 110%, rgba(237,184,74,.03) 0%,transparent 60%)}
+
 ::-webkit-scrollbar{width:3px;height:3px}
-::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
 ::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
-/* ── TOPBAR ─────────────────────────────────────────── */
-#topbar{
-  display:flex;align-items:center;height:46px;
-  background:rgba(5,11,18,.99);border-bottom:1px solid var(--b);
-  flex-shrink:0;position:relative;z-index:200
+.topbar{
+  display:flex;align-items:center;gap:0;height:48px;
+  background:rgba(3,8,16,.98);border-bottom:1px solid var(--border);
+  flex-shrink:0;position:relative;z-index:100
 }
-.logo{display:flex;align-items:center;gap:9px;padding:0 16px;border-right:1px solid var(--b);height:100%;cursor:default;user-select:none}
-.logo-gem{width:28px;height:28px;background:linear-gradient(135deg,var(--a),var(--a2));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 0 14px rgba(12,212,247,.35)}
-.logo-txt{font-family:'Syne',sans-serif;font-weight:800;font-size:.92rem;letter-spacing:-.03em}
-.logo-txt em{color:var(--a);font-style:normal}
-.logo-v{font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--t3);margin-top:2px;letter-spacing:.04em}
+.logo{display:flex;align-items:center;gap:10px;padding:0 16px;height:100%;border-right:1px solid var(--border);cursor:default}
+.logo-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 12px rgba(0,200,245,.3)}
+.logo-text{font-family:'Outfit',sans-serif;font-weight:800;font-size:.95rem;letter-spacing:-.02em}
+.logo-text em{color:var(--accent);font-style:normal}
+.logo-sub{font-size:.55rem;font-family:'DM Mono',monospace;color:var(--text3);margin-top:1px}
 
-.sym-wrap{display:flex;align-items:center;gap:6px;padding:0 12px;border-right:1px solid var(--b);height:100%}
-#symInput{
-  background:var(--bg3);border:1px solid var(--b2);border-radius:6px;
-  padding:5px 30px 5px 10px;color:var(--t);
-  font-family:'JetBrains Mono',monospace;font-size:.8rem;
-  width:118px;outline:none;text-transform:uppercase;
-  transition:border-color .15s
-}
-#symInput:focus{border-color:var(--a);box-shadow:0 0 0 2px var(--a3)}
-.sym-icon{margin-left:-26px;color:var(--t3);font-size:.75rem;cursor:pointer;pointer-events:none}
+.sym-bar{display:flex;align-items:center;gap:6px;padding:0 12px;height:100%;border-right:1px solid var(--border)}
+.sym-input-wrap{position:relative;display:flex;align-items:center}
+#symInput{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 32px 5px 10px;
+  color:var(--text);font-family:'DM Mono',monospace;font-size:.82rem;width:130px;
+  outline:none;text-transform:uppercase}
+#symInput:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,200,245,.12)}
+.sym-search-btn{position:absolute;right:6px;background:none;border:none;cursor:pointer;color:var(--text3);font-size:.8rem}
 
-.type-tabs{display:flex;gap:1px;padding:0 8px;height:100%;align-items:center}
-.ttab{padding:4px 10px;border-radius:5px;border:none;background:transparent;
-  color:var(--t3);font-family:'JetBrains Mono',monospace;font-size:.65rem;cursor:pointer;transition:all .15s}
-.ttab.on{background:var(--a);color:var(--bg);font-weight:600}
-.ttab:hover:not(.on){background:var(--b);color:var(--t2)}
+.mode-tabs{display:flex;gap:1px;padding:0 6px;height:100%;align-items:center}
+.mode-tab{padding:5px 11px;border-radius:6px;border:none;background:transparent;
+  color:var(--text3);font-family:'DM Mono',monospace;font-size:.68rem;cursor:pointer;transition:all .15s}
+.mode-tab.active{background:var(--accent);color:var(--bg);font-weight:600}
+.mode-tab:hover:not(.active){background:var(--border);color:var(--text2)}
 
-#analyzeBtn{
-  margin:0 8px;padding:6px 16px;
-  background:linear-gradient(135deg,var(--a),var(--a2));
-  border:none;border-radius:6px;color:var(--bg);
-  font-family:'Syne',sans-serif;font-weight:700;font-size:.74rem;
+.analyze-btn-top{
+  margin-left:6px;padding:6px 14px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none;border-radius:7px;color:var(--bg);
+  font-family:'Outfit',sans-serif;font-weight:700;font-size:.75rem;
   cursor:pointer;display:flex;align-items:center;gap:5px;
-  box-shadow:0 2px 14px rgba(12,212,247,.35);transition:all .18s;flex-shrink:0
+  box-shadow:0 2px 12px rgba(0,200,245,.3);transition:all .18s
 }
-#analyzeBtn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 20px rgba(12,212,247,.5)}
-#analyzeBtn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.analyze-btn-top:hover{transform:translateY(-1px);box-shadow:0 4px 18px rgba(0,200,245,.45)}
+.analyze-btn-top:disabled{opacity:.4;cursor:not-allowed;transform:none}
 
-/* market ticker */
-#ticker{flex:1;overflow:hidden;display:flex;align-items:center;height:100%;padding:0 4px}
-.ti{display:flex;align-items:center;gap:4px;padding:0 10px;
-  font-family:'JetBrains Mono',monospace;font-size:.63rem;white-space:nowrap;
-  border-right:1px solid var(--b);cursor:pointer;transition:background .15s;height:100%}
-.ti:hover{background:var(--bg3)}
-.ti-s{color:var(--a);font-weight:600}.ti-v{color:var(--t)}
-.ti-c.up{color:var(--green)}.ti-c.dn{color:var(--red)}.ti-c.fl{color:var(--t2)}
+.topbar-mid{flex:1;display:flex;align-items:center;gap:0;overflow:hidden;padding:0 8px}
+.ticker-item{display:flex;align-items:center;gap:5px;padding:0 10px;font-family:'DM Mono',monospace;font-size:.64rem;white-space:nowrap;border-right:1px solid var(--border);cursor:pointer;transition:background .15s}
+.ticker-item:hover{background:var(--bg3)}
+.ti-sym{color:var(--accent);font-weight:600}
+.ti-val{color:var(--text)}
+.ti-chg.up{color:var(--green)}.ti-chg.dn{color:var(--red)}
 
-.topbar-r{display:flex;align-items:center;gap:12px;padding:0 14px;flex-shrink:0}
-.status{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--t3)}
-.dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 2.5s infinite}
-@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,230,122,.5)}50%{opacity:.5;box-shadow:0 0 0 4px rgba(0,230,122,0)}}
-#clock{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--t3)}
+.topbar-right{display:flex;align-items:center;gap:12px;padding:0 14px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--text3)}
+.status-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,217,126,.5)}50%{opacity:.5;box-shadow:0 0 0 4px rgba(0,217,126,0)}}
 
-/* ── INDICATOR BAR ──────────────────────────────────── */
-#indbar{
-  display:flex;align-items:center;gap:1px;padding:0 8px;height:33px;
-  background:var(--bg2);border-bottom:1px solid var(--b);
-  flex-shrink:0;z-index:100;overflow-x:auto
+.ind-toolbar{
+  display:flex;align-items:center;gap:2px;padding:0 8px;height:36px;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  flex-shrink:0;z-index:99;overflow-x:auto
 }
-#indbar::-webkit-scrollbar{height:0}
-.ig{display:flex;gap:1px;padding:0 4px;border-right:1px solid var(--b)}
-.ig:last-child{border:none}
-.ibtn{
-  padding:2px 8px;border-radius:4px;border:1px solid transparent;
-  background:transparent;color:var(--t3);
-  font-family:'JetBrains Mono',monospace;font-size:.6rem;
-  cursor:pointer;transition:all .12s;white-space:nowrap
+.ind-toolbar::-webkit-scrollbar{height:0}
+.tool-group{display:flex;gap:1px;padding:0 4px;border-right:1px solid var(--border)}
+.tool-group:last-child{border-right:none}
+.tb-btn{
+  padding:3px 9px;border-radius:5px;border:1px solid transparent;
+  background:transparent;color:var(--text3);font-family:'DM Mono',monospace;
+  font-size:.63rem;cursor:pointer;transition:all .15s;white-space:nowrap
 }
-.ibtn:hover{background:var(--bg3);color:var(--t2);border-color:var(--b)}
-.ibtn.on{background:var(--a3);color:var(--a);border-color:rgba(12,212,247,.35)}
-.ibtn.on-g{background:rgba(240,180,41,.1);color:var(--gold);border-color:rgba(240,180,41,.35)}
+.tb-btn:hover{background:var(--bg3);color:var(--text2);border-color:var(--border)}
+.tb-btn.active{background:var(--accent3);color:var(--accent);border-color:var(--accent);border-opacity:.4}
+.tb-btn.active-tool{background:rgba(237,184,74,.12);color:var(--gold);border-color:rgba(237,184,74,.4)}
+.tb-label{font-size:.6rem;color:var(--text3);font-family:'DM Mono',monospace;padding:0 4px}
 
-/* period selector */
-.per-group{display:flex;gap:1px;padding:0 8px;margin-left:auto}
-.pbtn{padding:2px 7px;border-radius:4px;border:1px solid var(--b);
-  background:transparent;color:var(--t3);font-family:'JetBrains Mono',monospace;
-  font-size:.6rem;cursor:pointer;transition:all .12s}
-.pbtn.on{background:var(--b);color:var(--a)}
-.pbtn:hover:not(.on){border-color:var(--b2);color:var(--t2)}
+.workspace{display:flex;flex:1;overflow:hidden;position:relative;z-index:1}
 
-/* ── MAIN LAYOUT ─────────────────────────────────────── */
-#main{display:flex;flex:1;overflow:hidden;position:relative;z-index:1}
-
-/* LEFT PANEL */
-#lpanel{
-  width:220px;min-width:220px;
-  background:var(--bg2);border-right:1px solid var(--b);
-  display:flex;flex-direction:column;overflow:hidden;flex-shrink:0
+.sidebar{
+  width:240px;flex-shrink:0;
+  background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden
 }
-.panel-hd{
-  padding:8px 12px;border-bottom:1px solid var(--b);
-  font-family:'Syne',sans-serif;font-weight:700;font-size:.7rem;
-  color:var(--t2);text-transform:uppercase;letter-spacing:.08em;flex-shrink:0
+.sidebar-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.stab{flex:1;padding:8px 4px;text-align:center;font-family:'DM Mono',monospace;
+  font-size:.62rem;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.stab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.stab:hover:not(.active){color:var(--text2)}
+.sidebar-panel{flex:1;overflow-y:auto;display:none;flex-direction:column;gap:0}
+.sidebar-panel.active{display:flex}
+
+.sec{border-bottom:1px solid var(--border)}
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;cursor:pointer;
+  font-family:'DM Mono',monospace;font-size:.62rem;color:var(--text3);
+  background:var(--bg2);user-select:none;transition:color .15s}
+.sec-head:hover{color:var(--text2)}
+.sec-head-title{display:flex;align-items:center;gap:5px;color:var(--accent);font-weight:600;font-size:.62rem}
+.sec-body{padding:6px 8px;background:var(--bg)}
+.sec-body.collapsed{display:none}
+
+.chip-group{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px}
+.chip{padding:3px 9px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:20px;font-family:'DM Mono',monospace;font-size:.62rem;
+  color:var(--text2);cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent3)}
+
+.ind-row{display:flex;align-items:center;justify-content:space-between;
+  padding:5px 10px;transition:background .1s}
+.ind-row:hover{background:var(--bg3)}
+.ind-label{display:flex;align-items:center;gap:7px;font-size:.72rem;color:var(--text2);cursor:pointer}
+.ind-color{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.ind-toggle{width:28px;height:15px;background:var(--border2);border-radius:8px;
+  cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.ind-toggle.on{background:var(--accent)}
+.ind-toggle::after{content:'';position:absolute;width:11px;height:11px;
+  background:#fff;border-radius:50%;top:2px;left:2px;transition:transform .2s}
+.ind-toggle.on::after{transform:translateX(13px)}
+
+.data-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.dc{padding:7px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border)}
+.dc:nth-child(even){border-right:none}
+.dc-l{font-family:'DM Mono',monospace;font-size:.57rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.dc-v{font-family:'DM Mono',monospace;font-size:.82rem;font-weight:600;color:var(--text)}
+.dc-v.up{color:var(--green)}.dc-v.dn{color:var(--red)}.dc-v.neu{color:var(--text2)}
+.dc-s{font-size:.6rem;font-family:'DM Mono',monospace;color:var(--text3);margin-top:1px}
+
+.chart-area{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.chart-container{flex:1;position:relative;overflow:hidden}
+#mainChart{width:100%;height:100%}
+.chart-overlay{position:absolute;top:8px;left:8px;z-index:10;display:flex;flex-direction:column;gap:4px;pointer-events:none}
+.chart-legend{display:flex;align-items:center;gap:8px;padding:3px 8px;
+  background:rgba(3,8,16,.85);border-radius:5px;font-family:'DM Mono',monospace;font-size:.65rem;
+  backdrop-filter:blur(4px)}
+.legend-sym{color:var(--accent);font-weight:700}
+.legend-ohlc span{color:var(--text2);margin-right:4px}
+.legend-ohlc .val{color:var(--text)}
+.legend-chg.up{color:var(--green)}.legend-chg.dn{color:var(--red)}
+
+.subchart-wrap{flex-shrink:0;border-top:1px solid var(--border);position:relative}
+.subchart-wrap.hidden{display:none}
+.subchart-label{position:absolute;top:4px;left:8px;z-index:10;
+  font-family:'DM Mono',monospace;font-size:.6rem;color:var(--text3);pointer-events:none}
+
+.rpanel{
+  width:380px;flex-shrink:0;
+  background:var(--bg2);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden
 }
-.panel-hd span{color:var(--a)}
+.rpanel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.rtab{flex:1;padding:9px 4px;text-align:center;font-family:'DM Mono',monospace;
+  font-size:.62rem;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.rtab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.rpanel-body{flex:1;overflow-y:auto;display:none}
+.rpanel-body.active{display:block}
 
-/* market indices */
-#idx-list{padding:6px 0;flex-shrink:0}
-.idx-row{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:5px 12px;cursor:pointer;transition:background .1s
-}
-.idx-row:hover{background:var(--bg3)}
-.idx-name{font-size:.72rem;color:var(--t);font-weight:600}
-.idx-val{font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:500}
-.idx-chg{font-family:'JetBrains Mono',monospace;font-size:.63rem}
-.up{color:var(--green)}.dn{color:var(--red)}.fl{color:var(--t2)}
+#welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:16px;padding:24px;text-align:center}
+.w-icon{font-size:2.5rem;animation:float 3.5s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.w-title{font-family:'Outfit',sans-serif;font-size:1.4rem;font-weight:800;
+  background:linear-gradient(135deg,var(--accent),var(--gold));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.w-desc{font-size:.78rem;color:var(--text3);line-height:1.7;max-width:280px}
+.feat-list{display:flex;flex-direction:column;gap:6px;width:100%}
+.feat{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;text-align:left}
+.feat-ic{font-size:1rem;flex-shrink:0;margin-top:1px}
+.feat-title{font-family:'Outfit',sans-serif;font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:2px}
+.feat-desc{font-size:.64rem;color:var(--text3);line-height:1.5}
 
-/* watchlist / movers */
-#mover-list{flex:1;overflow-y:auto;padding:4px 0}
-.mover-row{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:4px 12px;cursor:pointer;transition:background .1s;gap:6px
-}
-.mover-row:hover{background:var(--bg3)}
-.mv-code{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--a);font-weight:600;min-width:40px}
-.mv-prc{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--t);flex:1;text-align:right}
-.mv-pct{font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:600;min-width:48px;text-align:right}
-
-.sep{height:1px;background:var(--b);margin:4px 0}
-.tab-row{display:flex;gap:1px;padding:4px 8px;flex-shrink:0;border-bottom:1px solid var(--b)}
-.mtab{flex:1;padding:4px;border-radius:4px;border:none;background:transparent;
-  color:var(--t3);font-family:'JetBrains Mono',monospace;font-size:.6rem;cursor:pointer}
-.mtab.on{background:var(--b);color:var(--a)}
-
-/* ── CENTER (charts) ─────────────────────────────────── */
-#center{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-
-/* price header */
-#price-hd{
-  display:flex;align-items:center;gap:12px;padding:6px 14px;
-  background:var(--bg2);border-bottom:1px solid var(--b);flex-shrink:0;flex-wrap:wrap
-}
-#ph-sym{font-family:'Syne',sans-serif;font-weight:800;font-size:1.05rem;color:var(--t)}
-#ph-price{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:1.3rem}
-#ph-chg{font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:600}
-.ph-meta{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--t3)}
-.rec-badge{padding:3px 10px;border-radius:4px;font-family:'Syne',sans-serif;font-weight:700;font-size:.68rem;margin-left:auto}
-.rec-BUY{background:rgba(0,230,122,.15);color:var(--green);border:1px solid rgba(0,230,122,.3)}
-.rec-SELL{background:var(--rd2);color:var(--red);border:1px solid rgba(240,64,96,.3)}
-.rec-HOLD{background:var(--gd2);color:var(--gold);border:1px solid rgba(240,180,41,.3)}
-.rec-WATCH{background:var(--bg3);color:var(--t2);border:1px solid var(--b2)}
-.src-badge{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--pur);
-  background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);padding:2px 7px;border-radius:3px}
-
-/* charts area */
-#charts-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
-#main-chart{flex:1;min-height:0}
-#sub-charts{height:130px;flex-shrink:0;display:none;flex-direction:column}
-#sub-chart{flex:1}
-
-/* ── RIGHT PANEL ─────────────────────────────────────── */
-#rpanel{
-  width:300px;min-width:300px;
-  background:var(--bg2);border-left:1px solid var(--b);
-  display:flex;flex-direction:column;overflow:hidden;flex-shrink:0
-}
-.rtabs{display:flex;border-bottom:1px solid var(--b);flex-shrink:0}
-.rtab{flex:1;padding:8px 4px;border:none;background:transparent;
-  color:var(--t3);font-family:'JetBrains Mono',monospace;font-size:.6rem;
-  cursor:pointer;transition:all .12s;border-bottom:2px solid transparent}
-.rtab.on{color:var(--a);border-bottom-color:var(--a)}
-.rtab:hover:not(.on){color:var(--t2)}
-
-.rpanel-body{flex:1;overflow-y:auto;padding:10px 10px 20px}
-
-/* ── AI REPORT ────────────────────────────────────────── */
-#ai-report{font-size:.72rem;line-height:1.65;color:var(--t2)}
-#ai-report h1,#ai-report h2,#ai-report h3{
-  font-family:'Syne',sans-serif;color:var(--a);margin:10px 0 5px;font-size:.8rem}
-#ai-report h1{font-size:.9rem;color:var(--t);border-bottom:1px solid var(--b2);padding-bottom:5px;margin-bottom:8px}
-#ai-report strong{color:var(--t)}
-#ai-report table{width:100%;border-collapse:collapse;margin:6px 0;font-family:'JetBrains Mono',monospace;font-size:.63rem}
-#ai-report th{background:var(--bg3);padding:4px 7px;text-align:left;color:var(--a);border:1px solid var(--b2)}
-#ai-report td{padding:3px 7px;border:1px solid var(--b);color:var(--t2)}
-#ai-report tr:nth-child(even) td{background:rgba(13,21,37,.5)}
-#ai-report code{background:var(--bg3);padding:1px 5px;border-radius:3px;
-  font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--ora)}
-#ai-report ul,#ai-report ol{padding-left:16px;margin:4px 0}
-#ai-report li{margin:2px 0}
-#ai-report blockquote{border-left:2px solid var(--a2);padding-left:8px;color:var(--t3);margin:4px 0}
-#ai-report hr{border:none;border-top:1px solid var(--b);margin:8px 0}
-#ai-report p{margin:3px 0}
-
-/* ── TECH PANEL ───────────────────────────────────────── */
-.sect-hd{font-family:'Syne',sans-serif;font-weight:700;font-size:.65rem;
-  color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin:10px 0 6px;
-  display:flex;align-items:center;gap:6px}
-.sect-hd::after{content:'';flex:1;height:1px;background:var(--b)}
-.kv-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px}
-.kv{display:flex;justify-content:space-between;align-items:center;
-  padding:4px 7px;background:var(--bg3);border-radius:5px;
-  border:1px solid var(--b)}
-.kv-k{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--t3)}
-.kv-v{font-family:'JetBrains Mono',monospace;font-size:.67rem;font-weight:600;color:var(--t)}
-.kv-v.up{color:var(--green)}.kv-v.dn{color:var(--red)}
-
-/* forecast bar */
-.fc-bar{margin:6px 0;padding:8px;background:var(--bg3);border-radius:6px;border:1px solid var(--b)}
-.fc-row{display:flex;justify-content:space-between;align-items:center;margin:2px 0;
-  font-family:'JetBrains Mono',monospace;font-size:.65rem}
-.fc-lbl{color:var(--t3)}.fc-val{color:var(--t);font-weight:600}
-
-/* LSTM card */
-.lstm-card{padding:8px;background:rgba(167,139,250,.05);border:1px solid rgba(167,139,250,.2);
-  border-radius:6px;margin:6px 0}
-.lstm-title{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;color:var(--pur);margin-bottom:5px}
-
-/* ── NEWS ─────────────────────────────────────────────── */
-.news-item{padding:7px 0;border-bottom:1px solid var(--b)}
-.news-item:last-child{border:none}
-.ni-title{font-size:.7rem;color:var(--t);font-weight:600;line-height:1.4;margin-bottom:2px}
-.ni-body{font-size:.63rem;color:var(--t3);line-height:1.45}
-.ni-link{font-size:.58rem;color:var(--a2);text-decoration:none;margin-top:2px;display:inline-block}
-.ni-link:hover{color:var(--a)}
-
-/* ── LOADING ──────────────────────────────────────────── */
-#loader{
-  display:none;position:absolute;inset:0;
-  background:rgba(5,11,18,.85);z-index:500;
-  flex-direction:column;align-items:center;justify-content:center;gap:14px
-}
-.ld-ring{width:44px;height:44px;border:3px solid var(--b2);
-  border-top-color:var(--a);border-radius:50%;animation:spin .8s linear infinite}
+#loading{display:none;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:16px}
+#loading.show{display:flex}
+.spin-wrap{position:relative;width:60px;height:60px}
+.ring1{width:60px;height:60px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);animation:spin 1s linear infinite}
+.ring2{position:absolute;inset:8px;border-radius:50%;border:2px solid var(--border);border-bottom-color:var(--gold);animation:spin .7s linear infinite reverse}
 @keyframes spin{to{transform:rotate(360deg)}}
-.ld-steps{display:flex;flex-direction:column;gap:4px;align-items:center}
-.ld-step{font-family:'JetBrains Mono',monospace;font-size:.67rem;color:var(--t3);
-  display:flex;align-items:center;gap:7px}
-.ld-step.done{color:var(--green)}.ld-step.act{color:var(--a)}
-.ld-step::before{content:'○';font-size:.55rem}
-.ld-step.done::before{content:'✓';color:var(--green)}
-.ld-step.act::before{content:'◉';color:var(--a);animation:pulse2 1s ease-in-out infinite}
-@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.4}}
+.load-text{font-family:'Outfit',sans-serif;font-weight:700;font-size:.9rem;color:var(--accent)}
+.load-sub{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--text3)}
+.load-steps{display:flex;flex-direction:column;gap:5px;width:100%;max-width:280px}
+.lstep{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:7px;
+  font-family:'DM Mono',monospace;font-size:.64rem;color:var(--text3);
+  background:var(--bg3);border:1px solid var(--border);transition:all .3s}
+.lstep.active{color:var(--accent);border-color:var(--accent);background:var(--accent3)}
+.lstep.done{color:var(--green);border-color:var(--green);background:var(--green2)}
 
-/* ── WELCOME ──────────────────────────────────────────── */
-#welcome{
-  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  flex-direction:column;gap:10px;background:var(--bg);z-index:10
+.report-wrap{padding:16px}
+.rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;
+  padding-bottom:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.rec-sym{font-family:'Outfit',sans-serif;font-size:1.5rem;font-weight:900;color:var(--accent)}
+.rec-meta{display:flex;flex-direction:column;gap:2px}
+.rec-type{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--text3);text-transform:uppercase;letter-spacing:.1em}
+.rec-time{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--text3)}
+.rec-badge{padding:6px 14px;border-radius:7px;font-family:'Outfit',sans-serif;
+  font-size:.82rem;font-weight:800;letter-spacing:.05em;border:2px solid;display:flex;align-items:center;gap:5px}
+.rec-BUY{border-color:var(--green);color:var(--green);background:var(--green2)}
+.rec-SELL{border-color:var(--red);color:var(--red);background:var(--red2)}
+.rec-HOLD{border-color:var(--gold);color:var(--gold);background:var(--gold2)}
+.rec-WATCH{border-color:var(--accent);color:var(--accent);background:var(--accent3)}
+
+.badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.badge{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;
+  border:1px solid;font-family:'DM Mono',monospace;font-size:.6rem}
+.badge.ok{border-color:var(--green);color:var(--green);background:var(--green2)}
+.badge.warn{border-color:var(--yellow);color:var(--yellow);background:rgba(255,204,0,.08)}
+.badge.info{border-color:var(--accent);color:var(--accent);background:var(--accent3)}
+
+.report-body{font-size:.8rem;color:var(--text);line-height:1.8}
+.report-body h1{font-family:'Outfit',sans-serif;font-size:1rem;font-weight:800;color:var(--accent);margin:14px 0 5px}
+.report-body h2{font-family:'Outfit',sans-serif;font-size:.9rem;font-weight:700;color:var(--gold);
+  border-bottom:1px solid var(--border);padding-bottom:4px;margin:12px 0 5px}
+.report-body h3{font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:700;color:var(--accent);margin:10px 0 4px}
+.report-body strong{color:var(--text);font-weight:600}
+.report-body em{color:var(--text2);font-style:italic}
+.report-body ul,.report-body ol{padding-left:16px;margin:4px 0}
+.report-body li{margin-bottom:3px}
+.report-body hr{border:none;border-top:1px solid var(--border);margin:10px 0}
+.report-body blockquote{border-left:3px solid var(--accent);padding:5px 10px;
+  background:var(--accent3);border-radius:0 6px 6px 0;margin:6px 0;color:var(--text2)}
+.report-body table{width:100%;border-collapse:collapse;margin:8px 0;font-size:.72rem;font-family:'DM Mono',monospace}
+.report-body th,.report-body td{padding:5px 8px;border:1px solid var(--border);text-align:left}
+.report-body th{background:var(--bg3);color:var(--accent)}
+.report-body p{margin-bottom:4px}
+.report-body code{background:var(--bg3);border:1px solid var(--border);
+  padding:1px 4px;border-radius:3px;font-family:'DM Mono',monospace;font-size:.76em;color:var(--accent)}
+
+.fc-panel{padding:12px}
+.fc-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px}
+.fc-card-title{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.fc-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.fc-item{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:7px}
+.fc-item-l{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--text3);margin-bottom:2px}
+.fc-item-v{font-family:'Outfit',monospace;font-size:.88rem;font-weight:700;color:var(--text)}
+.fc-item-v.up{color:var(--green)}.fc-item-v.dn{color:var(--red)}
+
+#errorBox{display:none;margin:16px;padding:12px;background:var(--red2);border:1px solid var(--red);
+  border-radius:8px;color:var(--red);font-size:.78rem;line-height:1.6}
+#errorBox.show{display:block}
+
+.fund-table{width:100%;border-collapse:collapse}
+.fund-table th{padding:6px 8px;background:var(--bg2);color:var(--accent);
+  font-family:'DM Mono',monospace;font-size:.6rem;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.fund-table td{padding:6px 8px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:.72rem;color:var(--text2)}
+.fund-table tr:hover td{background:var(--bg3);color:var(--text)}
+.td-val{text-align:right;color:var(--text);font-weight:600}
+.td-note{color:var(--text3);font-size:.66rem}
+
+.copy-btn{padding:4px 10px;border-radius:5px;background:var(--bg3);border:1px solid var(--border);
+  color:var(--text2);font-family:'DM Mono',monospace;font-size:.6rem;cursor:pointer;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+.crosshair-info{position:absolute;bottom:4px;left:8px;z-index:15;
+  display:flex;gap:8px;font-family:'DM Mono',monospace;font-size:.62rem;
+  background:rgba(3,8,16,.9);border-radius:5px;padding:3px 8px;
+  border:1px solid var(--border);pointer-events:none;backdrop-filter:blur(4px)}
+.ci-item span{color:var(--text3);margin-right:2px}
+.ci-item .v{color:var(--text)}
+
+.toast{position:fixed;top:56px;right:12px;z-index:999;padding:8px 14px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  font-family:'DM Mono',monospace;font-size:.7rem;color:var(--text2);
+  box-shadow:var(--shadow);transform:translateX(120%);transition:transform .3s}
+.toast.show{transform:translateX(0)}
+.toast.ok{border-color:var(--green);color:var(--green)}
+.toast.err{border-color:var(--red);color:var(--red)}
+
+.drawings-panel{position:absolute;top:8px;right:8px;z-index:20;
+  background:rgba(3,8,16,.9);border:1px solid var(--border);border-radius:8px;
+  padding:6px;display:flex;flex-direction:column;gap:4px}
+.draw-btn{width:28px;height:28px;border-radius:4px;border:1px solid var(--border);
+  background:var(--bg3);color:var(--text2);cursor:pointer;display:flex;
+  align-items:center;justify-content:center;font-size:12px;transition:all .15s}
+.draw-btn:hover{border-color:var(--accent);color:var(--accent)}
+.draw-btn.active{background:var(--accent3);border-color:var(--accent);color:var(--accent)}
+
+@media(max-width:900px){
+  .sidebar{width:0;overflow:hidden}
+  .rpanel{width:300px}
 }
-.wlc-icon{font-size:2.5rem;margin-bottom:4px}
-.wlc-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;
-  color:var(--t);letter-spacing:-.03em}
-.wlc-title span{color:var(--a)}
-.wlc-sub{color:var(--t3);font-size:.8rem;text-align:center;max-width:340px;line-height:1.6}
-.wlc-chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:6px}
-.wchip{padding:4px 12px;border:1px solid var(--b2);border-radius:20px;
-  font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--t2);
-  cursor:pointer;transition:all .15s;background:var(--bg2)}
-.wchip:hover{border-color:var(--a);color:var(--a);background:var(--a3)}
-.wlc-feats{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:6px}
-.wfeat{display:flex;align-items:center;gap:5px;font-size:.67rem;color:var(--t3)}
-.wfeat-dot{width:6px;height:6px;border-radius:50%;background:var(--a)}
-
-/* ── TOAST ────────────────────────────────────────────── */
-#toast{
-  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-  background:var(--bg3);border:1px solid var(--b2);border-radius:7px;
-  padding:8px 18px;font-family:'JetBrains Mono',monospace;font-size:.72rem;
-  color:var(--t);z-index:9999;opacity:0;transition:opacity .25s;pointer-events:none
+@media(max-width:640px){
+  .rpanel{display:none}
+  .topbar-mid{display:none}
 }
-#toast.show{opacity:1}
-
-/* ── MINI OHLCV ───────────────────────────────────────── */
-.ohlcv-row{display:flex;gap:12px;padding:5px 14px;
-  background:var(--bg2);border-bottom:1px solid var(--b);
-  font-family:'JetBrains Mono',monospace;font-size:.62rem;flex-shrink:0}
-.ohlcv-item{display:flex;gap:4px}
-.ohlcv-item span:first-child{color:var(--t3)}
-.ohlcv-item span:last-child{color:var(--t);font-weight:600}
-
-/* ── SCROLLBAR for panels ─────────────────────────────── */
-.rpanel-body::-webkit-scrollbar,#mover-list::-webkit-scrollbar{width:3px}
-.rpanel-body::-webkit-scrollbar-thumb,#mover-list::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
 </style>
 </head>
 <body>
 
-<!-- ── TOPBAR ─────────────────────────────────────────── -->
-<div id="topbar">
+<div class="topbar">
   <div class="logo">
-    <div class="logo-gem">📈</div>
+    <div class="logo-mark">📈</div>
     <div>
-      <div class="logo-txt">VN<em>Stock</em>AI</div>
-      <div class="logo-v">TERMINAL v6.0</div>
+      <div class="logo-text">VN<em>Stock</em>AI</div>
+      <div class="logo-sub">v6.0 · LSTM Deep Learning · Real Data</div>
     </div>
   </div>
 
-  <div class="sym-wrap">
-    <input id="symInput" placeholder="VNM, HPG, VIC…" spellcheck="false" autocomplete="off"/>
-    <span class="sym-icon">⌕</span>
+  <div class="sym-bar">
+    <div class="sym-input-wrap">
+      <input id="symInput" type="text" placeholder="Mã, VD: VCB" autocomplete="off" spellcheck="false"/>
+      <button class="sym-search-btn" onclick="startAnalysis()">⏎</button>
+    </div>
+    <div class="mode-tabs">
+      <button class="mode-tab active" onclick="setMode('stock',this)">📊 Cổ phiếu</button>
+      <button class="mode-tab" onclick="setMode('fund',this)">🏦 Quỹ</button>
+      <button class="mode-tab" onclick="setMode('forex',this)">💱 Forex</button>
+    </div>
+    <button class="analyze-btn-top" id="analyzeBtn" onclick="startAnalysis()">
+      <span>🧠</span> Phân tích
+    </button>
   </div>
 
-  <div class="type-tabs">
-    <button class="ttab on" data-type="stock">CỔ PHIẾU</button>
+  <div class="topbar-mid" id="tickerBar">
+    <div class="ticker-item" onclick="quickLoad('VN-INDEX')">
+      <span class="ti-sym">VN-INDEX</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    </div>
+    <div class="ticker-item" onclick="quickLoad('VCB')">
+      <span class="ti-sym">VCB</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    </div>
+    <div class="ticker-item" onclick="quickLoad('HPG')">
+      <span class="ti-sym">HPG</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    </div>
+    <div class="ticker-item" onclick="quickLoad('FPT')">
+      <span class="ti-sym">FPT</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    </div>
+    <div class="ticker-item" onclick="quickLoad('VHM')">
+      <span class="ti-sym">VHM</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    </div>
+    <div class="ticker-item" onclick="quickLoad('TCB')">
+      <span class="ti-sym">TCB</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    </div>
+    <div class="ticker-item" onclick="quickLoad('MBB')">
+      <span class="ti-sym">MBB</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    </div>
   </div>
 
-  <button id="analyzeBtn">⚡ PHÂN TÍCH</button>
-
-  <div id="ticker"></div>
-
-  <div class="topbar-r">
-    <div class="status"><div class="dot"></div><span>LIVE</span></div>
-    <div id="clock"></div>
+  <div class="topbar-right">
+    <div style="display:flex;align-items:center;gap:5px">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusTxt">Kết nối...</span>
+    </div>
+    <span id="clockEl"></span>
   </div>
 </div>
 
-<!-- ── INDICATOR BAR ────────────────────────────────────── -->
-<div id="indbar">
-  <div class="ig">
-    <button class="ibtn on"  data-ind="sma20"   >SMA 20</button>
-    <button class="ibtn"     data-ind="sma50"   >SMA 50</button>
-    <button class="ibtn"     data-ind="sma200"  >SMA 200</button>
-    <button class="ibtn"     data-ind="ema9"    >EMA 9</button>
-    <button class="ibtn"     data-ind="ema21"   >EMA 21</button>
+<div class="ind-toolbar">
+  <div class="tool-group">
+    <span class="tb-label">TIMEFRAME</span>
+    <button class="tb-btn active" onclick="setTF(this,'D')">1D</button>
+    <button class="tb-btn" onclick="setTF(this,'W')">1W</button>
+    <button class="tb-btn" onclick="setTF(this,'M')">1M</button>
   </div>
-  <div class="ig">
-    <button class="ibtn on"  data-ind="bb"      >BB</button>
-    <button class="ibtn"     data-ind="vwap"    >VWAP</button>
-    <button class="ibtn"     data-ind="ichimoku">Ichimoku</button>
+  <div class="tool-group">
+    <span class="tb-label">CHART</span>
+    <button class="tb-btn active" id="btnCandle" onclick="setChartType('candle',this)">🕯 Nến</button>
+    <button class="tb-btn" id="btnLine" onclick="setChartType('line',this)">📉 Line</button>
+    <button class="tb-btn" id="btnArea" onclick="setChartType('area',this)">📊 Area</button>
   </div>
-  <div class="ig">
-    <button class="ibtn on"  data-ind="rsi"     >RSI</button>
-    <button class="ibtn"     data-ind="macd"    >MACD</button>
-    <button class="ibtn"     data-ind="stoch"   >Stoch</button>
-    <button class="ibtn"     data-ind="cci"     >CCI</button>
-    <button class="ibtn"     data-ind="mfi"     >MFI</button>
+  <div class="tool-group">
+    <span class="tb-label">OVERLAYS</span>
+    <button class="tb-btn active" id="btnBB" onclick="toggleInd('bb',this)" title="Bollinger Bands">BB</button>
+    <button class="tb-btn active" id="btnSMA" onclick="toggleInd('sma',this)" title="SMA 20/50/200">SMA</button>
+    <button class="tb-btn" id="btnEMA" onclick="toggleInd('ema',this)" title="EMA 9/21/50">EMA</button>
+    <button class="tb-btn" id="btnIchi" onclick="toggleInd('ichi',this)" title="Ichimoku">ICHI</button>
+    <button class="tb-btn" id="btnVWAP" onclick="toggleInd('vwap',this)" title="VWAP">VWAP</button>
+    <button class="tb-btn active" id="btnForecast" onclick="toggleInd('forecast',this)" title="LSTM Forecast">🧠 AI</button>
   </div>
-  <div class="ig">
-    <button class="ibtn on-g" data-ind="forecast">🤖 LSTM</button>
-    <button class="ibtn"      data-ind="sr"      >S/R</button>
-    <button class="ibtn"      data-ind="pivot"   >Pivot</button>
+  <div class="tool-group">
+    <span class="tb-label">SUB</span>
+    <button class="tb-btn active" id="btnVol" onclick="toggleSub('vol',this)">VOL</button>
+    <button class="tb-btn active" id="btnRSI" onclick="toggleSub('rsi',this)">RSI</button>
+    <button class="tb-btn active" id="btnMACD" onclick="toggleSub('macd',this)">MACD</button>
+    <button class="tb-btn" id="btnStoch" onclick="toggleSub('stoch',this)">STOCH</button>
+    <button class="tb-btn" id="btnADX" onclick="toggleSub('adx',this)">ADX</button>
+    <button class="tb-btn" id="btnOBV" onclick="toggleSub('obv',this)">OBV</button>
   </div>
-  <div class="per-group">
-    <button class="pbtn" data-per="1m">1T</button>
-    <button class="pbtn" data-per="3m">3T</button>
-    <button class="pbtn on" data-per="6m">6T</button>
-    <button class="pbtn" data-per="1y">1N</button>
-    <button class="pbtn" data-per="all">Tất cả</button>
-  </div>
-</div>
-
-<!-- ── MAIN ─────────────────────────────────────────────── -->
-<div id="main">
-
-  <!-- LEFT PANEL -->
-  <div id="lpanel">
-    <div class="panel-hd">📊 THỊ TRƯỜNG <span id="mkt-time"></span></div>
-    <div id="idx-list">
-      <div class="idx-row" onclick="loadSymbol('VNINDEX')">
-        <span class="idx-name">VN-Index</span>
-        <div style="text-align:right">
-          <div class="idx-val up" id="vni-val">–</div>
-          <div class="idx-chg up" id="vni-chg">–</div>
-        </div>
-      </div>
-      <div class="idx-row" onclick="loadSymbol('HNXINDEX')">
-        <span class="idx-name">HNX</span>
-        <div style="text-align:right">
-          <div class="idx-val fl" id="hnx-val">–</div>
-          <div class="idx-chg fl" id="hnx-chg">–</div>
-        </div>
-      </div>
-      <div class="idx-row">
-        <span class="idx-name">UPCOM</span>
-        <div style="text-align:right">
-          <div class="idx-val fl" id="upc-val">–</div>
-          <div class="idx-chg fl" id="upc-chg">–</div>
-        </div>
-      </div>
-      <div class="idx-row">
-        <span class="idx-name">VN30</span>
-        <div style="text-align:right">
-          <div class="idx-val fl" id="vn30-val">–</div>
-          <div class="idx-chg fl" id="vn30-chg">–</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="sep"></div>
-    <div class="tab-row">
-      <button class="mtab on" id="tab-gainer" onclick="showMovers('gainers')">🔺 Tăng mạnh</button>
-      <button class="mtab" id="tab-loser"  onclick="showMovers('losers')">🔻 Giảm mạnh</button>
-    </div>
-    <div id="mover-list"></div>
-  </div>
-
-  <!-- CENTER -->
-  <div id="center">
-    <!-- Welcome screen -->
-    <div id="welcome">
-      <div class="wlc-icon">📈</div>
-      <div class="wlc-title">VN<span>Stock</span>AI Terminal</div>
-      <div class="wlc-sub">Hệ thống phân tích chứng khoán chuyên nghiệp với dữ liệu toàn thị trường, LSTM thực và báo cáo AI chuẩn sell-side</div>
-      <div class="wlc-chips">
-        <span class="wchip" onclick="quickLoad('VNM')">VNM</span>
-        <span class="wchip" onclick="quickLoad('HPG')">HPG</span>
-        <span class="wchip" onclick="quickLoad('VIC')">VIC</span>
-        <span class="wchip" onclick="quickLoad('MSN')">MSN</span>
-        <span class="wchip" onclick="quickLoad('FPT')">FPT</span>
-        <span class="wchip" onclick="quickLoad('ACB')">ACB</span>
-        <span class="wchip" onclick="quickLoad('TCB')">TCB</span>
-        <span class="wchip" onclick="quickLoad('MWG')">MWG</span>
-      </div>
-      <div class="wlc-feats">
-        <div class="wfeat"><div class="wfeat-dot"></div>Dữ liệu: VNDirect + SSI + DNSE + TCBS</div>
-        <div class="wfeat"><div class="wfeat-dot" style="background:var(--pur)"></div>LSTM NumPy thực (không cần TensorFlow)</div>
-        <div class="wfeat"><div class="wfeat-dot" style="background:var(--gold)"></div>20+ chỉ báo kỹ thuật tương tác</div>
-        <div class="wfeat"><div class="wfeat-dot" style="background:var(--green)"></div>Báo cáo AI chuẩn VCBS/SSI</div>
-      </div>
-    </div>
-
-    <!-- Price header (hidden until load) -->
-    <div id="price-hd" style="display:none">
-      <span id="ph-sym">–</span>
-      <span id="ph-price" class="fl">–</span>
-      <span id="ph-chg" class="fl">–</span>
-      <div class="ph-meta" id="ph-meta"></div>
-      <span id="ph-src" class="src-badge" style="display:none"></span>
-      <span id="ph-rec" class="rec-badge rec-WATCH" style="margin-left:auto">WATCH</span>
-    </div>
-
-    <!-- OHLCV row -->
-    <div class="ohlcv-row" id="ohlcv-row" style="display:none">
-      <div class="ohlcv-item"><span>O</span><span id="ov-o">–</span></div>
-      <div class="ohlcv-item"><span>H</span><span id="ov-h" style="color:var(--green)">–</span></div>
-      <div class="ohlcv-item"><span>L</span><span id="ov-l" style="color:var(--red)">–</span></div>
-      <div class="ohlcv-item"><span>C</span><span id="ov-c">–</span></div>
-      <div class="ohlcv-item"><span>VOL</span><span id="ov-v">–</span></div>
-    </div>
-
-    <!-- Charts -->
-    <div id="charts-wrap">
-      <div id="main-chart"></div>
-      <div id="sub-charts"><div id="sub-chart"></div></div>
-    </div>
-  </div>
-
-  <!-- RIGHT PANEL -->
-  <div id="rpanel">
-    <div class="rtabs">
-      <button class="rtab on" onclick="showRTab('ai')">📋 BÁO CÁO AI</button>
-      <button class="rtab"    onclick="showRTab('tech')">📊 KỸ THUẬT</button>
-      <button class="rtab"    onclick="showRTab('fc')">🤖 DỰ BÁO</button>
-      <button class="rtab"    onclick="showRTab('news')">📰 TIN TỨC</button>
-    </div>
-    <div class="rpanel-body" id="rpanel-body">
-      <div style="color:var(--t3);font-family:'JetBrains Mono',monospace;font-size:.65rem;text-align:center;padding:30px 10px">
-        Nhập mã cổ phiếu và nhấn<br/>⚡ PHÂN TÍCH để bắt đầu
-      </div>
-    </div>
+  <div class="tool-group">
+    <span class="tb-label">DRAW</span>
+    <button class="tb-btn" id="toolNone" onclick="setDrawTool('none',this)">✗ Xóa</button>
+    <button class="tb-btn" id="toolHL" onclick="setDrawTool('hline',this)">— Ngang</button>
+    <button class="tb-btn" id="toolTL" onclick="setDrawTool('tline',this)">╱ Xu hướng</button>
+    <button class="tb-btn" id="toolFib" onclick="setDrawTool('fib',this)">Fib</button>
+    <button class="tb-btn" id="toolRect" onclick="setDrawTool('rect',this)">▭ HCN</button>
+    <button class="tb-btn" onclick="clearDrawings()">🗑</button>
   </div>
 </div>
 
-<!-- LOADER -->
-<div id="loader">
-  <div class="ld-ring"></div>
-  <div class="ld-steps">
-    <div class="ld-step" id="ls1">Lấy dữ liệu thị trường</div>
-    <div class="ld-step" id="ls2">Tính toán chỉ báo kỹ thuật</div>
-    <div class="ld-step" id="ls3">Huấn luyện mô hình LSTM</div>
-    <div class="ld-step" id="ls4">Tạo báo cáo AI</div>
-    <div class="ld-step" id="ls5">Vẽ biểu đồ tương tác</div>
+<div class="workspace">
+
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-tabs">
+      <div class="stab active" onclick="switchSTab('symbols',this)">Mã</div>
+      <div class="stab" onclick="switchSTab('indicators',this)">Chỉ báo</div>
+      <div class="stab" onclick="switchSTab('techdata',this)">Dữ liệu</div>
+    </div>
+
+    <div class="sidebar-panel active" id="sp-symbols">
+      <div class="sec">
+        <div class="sec-head" onclick="toggleSec(this)">
+          <span class="sec-head-title">📊 Cổ phiếu nổi bật</span><span>▾</span>
+        </div>
+        <div class="sec-body chip-group" id="stockChips">
+          <span class="chip" onclick="quickLoad('VCB')">VCB</span>
+          <span class="chip" onclick="quickLoad('VHM')">VHM</span>
+          <span class="chip" onclick="quickLoad('HPG')">HPG</span>
+          <span class="chip" onclick="quickLoad('FPT')">FPT</span>
+          <span class="chip" onclick="quickLoad('TCB')">TCB</span>
+          <span class="chip" onclick="quickLoad('MBB')">MBB</span>
+          <span class="chip" onclick="quickLoad('ACB')">ACB</span>
+          <span class="chip" onclick="quickLoad('VIC')">VIC</span>
+          <span class="chip" onclick="quickLoad('BID')">BID</span>
+          <span class="chip" onclick="quickLoad('CTG')">CTG</span>
+          <span class="chip" onclick="quickLoad('SSI')">SSI</span>
+          <span class="chip" onclick="quickLoad('VNM')">VNM</span>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-head" onclick="toggleSec(this)">
+          <span class="sec-head-title">🏦 Quỹ đầu tư</span><span>▾</span>
+        </div>
+        <div class="sec-body chip-group">
+          <span class="chip" onclick="quickLoad('E1VFVN30','fund')">E1VFVN30</span>
+          <span class="chip" onclick="quickLoad('VFMVSF','fund')">VFMVSF</span>
+          <span class="chip" onclick="quickLoad('SSISCA','fund')">SSISCA</span>
+          <span class="chip" onclick="quickLoad('MAFPF1','fund')">MAFPF1</span>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-head" onclick="toggleSec(this)">
+          <span class="sec-head-title">💱 Tỷ giá</span><span>▾</span>
+        </div>
+        <div class="sec-body chip-group">
+          <span class="chip" onclick="quickLoad('USD.VND','forex')">USD/VND</span>
+          <span class="chip" onclick="quickLoad('EUR.VND','forex')">EUR/VND</span>
+          <span class="chip" onclick="quickLoad('EUR.USD','forex')">EUR/USD</span>
+          <span class="chip" onclick="quickLoad('USD.JPY','forex')">USD/JPY</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-panel" id="sp-indicators">
+      <div class="sec">
+        <div class="sec-head"><span class="sec-head-title">📈 Trend</span></div>
+        <div class="sec-body" style="padding:0">
+          <div class="ind-row"><label class="ind-label"><div class="ind-color" style="background:#f0c040"></div>SMA 20</label><div class="ind-toggle on" onclick="toggleInd('sma20',this)" id="tog-sma20"></div></div>
+          <div class="ind-row"><label class="ind-label"><div class="ind-color" style="background:#ff8c42"></div>SMA 50</label><div class="ind-toggle on" onclick="toggleInd('sma50',this)" id="tog-sma50"></div></div>
+          <div class="ind-row"><label class="ind-label"><div class="ind-color" style="background:#f06292"></div>SMA 200</label><div class="ind-toggle on" onclick="toggleInd('sma200',this)" id="tog-sma200"></div></div>
+          <div class="ind-row"><label class="ind-label"><div class="ind-color" style="background:#9b7fe8"></div>EMA 9</label><div class="ind-toggle" onclick="toggleInd('ema9',this)" id="tog-ema9"></div></div>
+          <div class="ind-row"><label class="ind-label"><div class="ind-color" style="background:#64b5f6"></div>EMA 21</label><div class="ind-toggle" onclick="toggleInd('ema21',this)" id="tog-ema21"></div></div>
+          <div class="ind-row"><label class="ind-label"><div class="ind-color" style="background:#00c8f5"></div>Bollinger Bands</label><div class="ind-toggle on" onclick="toggleInd('bb2',this)" id="tog-bb2"></div></div>
+          <div class="ind-row"><label class="ind-label"><div class="ind-color" style="background:#26c6da"></div>VWAP</label><div class="ind-toggle" onclick="toggleInd('vwap2',this)" id="tog-vwap2"></div></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-head"><span class="sec-head-title">🔮 Ichimoku</span></div>
+        <div class="sec-body" style="padding:0">
+          <div class="ind-row"><label class="ind-label"><div class="ind-color" style="background:#ff5252"></div>Tenkan-sen</label><div class="ind-toggle" onclick="toggleInd('tenkan',this)" id="tog-tenkan"></div></div>
+          <div class="ind-row"><label class="ind-label"><div class="ind-color" style="background:#00e676"></div>Kijun-sen</label><div class="ind-toggle" onclick="toggleInd('kijun',this)" id="tog-kijun"></div></div>
+          <div class="ind-row"><label class="ind-label"><div class="ind-color" style="background:rgba(0,230,118,.3)"></div>Cloud A/B</label><div class="ind-toggle" onclick="toggleInd('cloud',this)" id="tog-cloud"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-panel" id="sp-techdata">
+      <div class="data-grid" id="techDataGrid">
+        <div class="dc" style="grid-column:1/-1;padding:10px;text-align:center;color:var(--text3);font-size:.7rem;font-family:'DM Mono',monospace">Phân tích để xem dữ liệu</div>
+      </div>
+    </div>
   </div>
+
+  <div class="chart-area">
+    <div class="chart-container" id="mainChartContainer">
+      <div id="mainChart"></div>
+      <div class="chart-overlay">
+        <div class="chart-legend" id="chartLegend" style="display:none">
+          <span class="legend-sym" id="lgSym">--</span>
+          <span class="legend-ohlc">
+            <span>O</span><span class="val" id="lgO">--</span>
+            <span>H</span><span class="val" id="lgH">--</span>
+            <span>L</span><span class="val" id="lgL">--</span>
+            <span>C</span><span class="val" id="lgC">--</span>
+          </span>
+          <span class="legend-chg" id="lgChg"></span>
+        </div>
+      </div>
+      <div class="crosshair-info" id="crosshairInfo" style="display:none">
+        <div class="ci-item"><span>Date</span><span class="v" id="ciDate">--</span></div>
+        <div class="ci-item"><span>Price</span><span class="v" id="ciPrice">--</span></div>
+        <div class="ci-item"><span>Vol</span><span class="v" id="ciVol">--</span></div>
+      </div>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:20;pointer-events:none" id="chartOverlayWrap">
+        <div id="welcome">
+          <div class="w-icon">📊</div>
+          <div class="w-title">VN Stock AI v6.0</div>
+          <p class="w-desc">Nhập mã cổ phiếu và bấm Phân tích để bắt đầu phân tích chuyên sâu với LSTM Deep Learning + Real Market Data</p>
+          <div class="feat-list">
+            <div class="feat"><div class="feat-ic">🧠</div><div><div class="feat-title">LSTM Deep Learning</div><div class="feat-desc">Bidirectional LSTM + Attention với Monte Carlo Dropout cho dự báo chính xác</div></div></div>
+            <div class="feat"><div class="feat-ic">📡</div><div><div class="feat-title">Real Market Data</div><div class="feat-desc">KBS → VCI → FMarket → MSN. Dữ liệu thực, không mock, không fallback giả</div></div></div>
+            <div class="feat"><div class="feat-ic">📊</div><div><div class="feat-title">Interactive Chart</div><div class="feat-desc">Vẽ trend line, Fibonacci, rectangle, text annotation như TradingView</div></div></div>
+            <div class="feat"><div class="feat-ic">📋</div><div><div class="feat-title">VCBS-Style Reports</div><div class="feat-desc">Entry, SL, TP cụ thể. P/E, P/B, ROE. Kịch bản Bull/Base/Bear</div></div></div>
+          </div>
+        </div>
+        <div id="loading">
+          <div class="spin-wrap"><div class="ring1"></div><div class="ring2"></div></div>
+          <div class="load-text" id="loadText">Đang phân tích...</div>
+          <div class="load-sub">LSTM Deep Learning v6.0 · Real Data</div>
+          <div class="load-steps">
+            <div class="lstep" id="ls1">📡 Lấy dữ liệu KBS/VCI/FMarket...</div>
+            <div class="lstep" id="ls2">📊 Tính 30+ chỉ báo kỹ thuật...</div>
+            <div class="lstep" id="ls3">🧠 Training LSTM Neural Network...</div>
+            <div class="lstep" id="ls4">📐 Monte Carlo Forecasting...</div>
+            <div class="lstep" id="ls5">🤖 AI phân tích đa chiều...</div>
+            <div class="lstep" id="ls6">📋 Tổng hợp báo cáo VCBS...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subchart-wrap" id="subVol" style="height:80px">
+      <div class="subchart-label">VOL</div>
+      <div id="volChart" style="height:100%;width:100%"></div>
+    </div>
+    <div class="subchart-wrap" id="subRSI" style="height:90px">
+      <div class="subchart-label">RSI(14)</div>
+      <div id="rsiChart" style="height:100%;width:100%"></div>
+    </div>
+    <div class="subchart-wrap" id="subMACD" style="height:90px">
+      <div class="subchart-label">MACD(12,26,9)</div>
+      <div id="macdChart" style="height:100%;width:100%"></div>
+    </div>
+    <div class="subchart-wrap hidden" id="subStoch" style="height:90px">
+      <div class="subchart-label">STOCH(14,3)</div>
+      <div id="stochChart" style="height:100%;width:100%"></div>
+    </div>
+    <div class="subchart-wrap hidden" id="subADX" style="height:90px">
+      <div class="subchart-label">ADX(14)</div>
+      <div id="adxChart" style="height:100%;width:100%"></div>
+    </div>
+    <div class="subchart-wrap hidden" id="subOBV" style="height:90px">
+      <div class="subchart-label">OBV</div>
+      <div id="obvChart" style="height:100%;width:100%"></div>
+    </div>
+  </div>
+
+  <div class="rpanel">
+    <div class="rpanel-tabs">
+      <div class="rtab active" onclick="switchRTab('report',this)">📋 Báo cáo AI</div>
+      <div class="rtab" onclick="switchRTab('forecast',this)">📐 Dự báo</div>
+      <div class="rtab" onclick="switchRTab('fundamental',this)">📊 Cơ bản</div>
+    </div>
+
+    <div class="rpanel-body active" id="rp-report">
+      <div id="reportContent">
+        <div id="errorBox"></div>
+        <div style="padding:20px;text-align:center;color:var(--text3);font-size:.75rem">
+          Chưa có báo cáo. Bấm phân tích để bắt đầu.
+        </div>
+      </div>
+    </div>
+
+    <div class="rpanel-body" id="rp-forecast">
+      <div class="fc-panel" id="fcContent">
+        <div style="padding:20px;text-align:center;color:var(--text3);font-size:.75rem">
+          Chưa có dữ liệu dự báo.
+        </div>
+      </div>
+    </div>
+
+    <div class="rpanel-body" id="rp-fundamental">
+      <div style="padding:12px" id="fundContent">
+        <div style="padding:20px;text-align:center;color:var(--text3);font-size:.75rem">
+          Chưa có dữ liệu cơ bản.
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<!-- TOAST -->
-<div id="toast"></div>
+<div class="toast" id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════
-const S = {
-  data: null, activeInds: new Set(["sma20","bb","rsi","forecast"]),
-  activeRTab: "ai", moversData: {gainers:[],losers:[]},
-  activeMoverTab: "gainers", period: "6m",
-  series: {}, subSeries: {}, subLabel: "RSI",
-  chartType: "candle"
+let currentMode = 'stock';
+let currentSym = '';
+let chartType = 'candle';
+let drawTool = 'none';
+let drawState = null;
+let stepTimer = null;
+let apiData = null;
+
+let mainChart = null;
+let mainSeries = null;
+let volChart = null; let volSeries = null;
+let rsiChart = null; let rsiSeries = null;
+let macdChart = null; let macdLineSeries = null; let macdSigSeries = null; let macdHistSeries = null;
+let stochChart = null; let stochKSeries = null; let stochDSeries = null;
+let adxChart = null; let adxSeries = null;
+let obvChart = null; let obvSeries = null;
+
+let sma20s = null; let sma50s = null; let sma200s = null;
+let ema9s = null; let ema21s = null; let ema50s = null;
+let bbUs = null; let bbMs = null; let bbLs = null;
+let fcSeries = null; let fcUpper = null; let fcLower = null;
+let vwapS = null;
+let tenkanS = null; let kijunS = null; let senkouAS = null; let senkouBS = null;
+let drawings = [];
+
+const visible = {
+  bb:true, sma:true, ema:false, ichi:false, vwap:false, forecast:true,
+  vol:true, rsi:true, macd:true, stoch:false, adx:false, obv:false
 };
 
-// ═══════════════════════════════════════════════════════
-// INIT — LightweightCharts
-// ═══════════════════════════════════════════════════════
-const MAIN_H = () => document.getElementById("main-chart").clientHeight;
-const SUB_H  = 130;
+function tick(){
+  const el = document.getElementById('clockEl');
+  if(el) el.textContent = new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tick,1000); tick();
 
-let chart, candleSeries, volSeries;
-let subChart, subLine1, subLine2, subHist;
-
-function initCharts() {
-  const wrap = document.getElementById("main-chart");
-  chart = LightweightCharts.createChart(wrap, {
-    width: wrap.clientWidth, height: wrap.clientHeight,
-    layout: { background:{color:"transparent"}, textColor:"#6e9cc0",
-               fontFamily:"'JetBrains Mono',monospace" },
-    grid:   { vertLines:{color:"rgba(26,45,68,.5)"}, horzLines:{color:"rgba(26,45,68,.5)"} },
-    crosshair: { mode: LightweightCharts.CrosshairMode.Normal,
-                 vertLine:{color:"rgba(12,212,247,.4)",width:1,style:4,labelBackgroundColor:"#0cd4f7"},
-                 horzLine:{color:"rgba(12,212,247,.4)",width:1,style:4,labelBackgroundColor:"#0cd4f7"} },
-    rightPriceScale: { borderColor:"#1a2d44", scaleMargins:{top:.08,bottom:.2} },
-    timeScale: { borderColor:"#1a2d44", timeVisible:true, secondsVisible:false,
-                  tickMarkFormatter: ts => {
-                    const d = new Date(ts*1000);
-                    return `${d.getDate()}/${d.getMonth()+1}`;
-                  } },
-    handleScroll: {mouseWheel:true,pressedMouseMove:true},
-    handleScale:  {mouseWheel:true,pinch:true,axisPressedMouseMove:true},
-  });
-
-  candleSeries = chart.addCandlestickSeries({
-    upColor:"#00e67a", downColor:"#f04060",
-    wickUpColor:"#00e67a", wickDownColor:"#f04060",
-    borderVisible: false, priceFormat:{type:"price",precision:0,minMove:10}
-  });
-
-  volSeries = chart.addHistogramSeries({
-    priceFormat:{type:"volume"}, priceScaleId:"vol",
-    scaleMargins:{top:.85,bottom:0}
-  });
-  chart.priceScale("vol").applyOptions({scaleMargins:{top:.85,bottom:0},borderVisible:false});
-
-  // Sub-chart for oscillators
-  const subWrap = document.getElementById("sub-chart");
-  subChart = LightweightCharts.createChart(subWrap, {
-    width: subWrap.clientWidth, height: SUB_H,
-    layout: {background:{color:"transparent"}, textColor:"#6e9cc0",
-              fontFamily:"'JetBrains Mono',monospace"},
-    grid:  {vertLines:{color:"rgba(26,45,68,.4)"}, horzLines:{color:"rgba(26,45,68,.4)"}},
-    crosshair:{mode:LightweightCharts.CrosshairMode.Normal,
-               vertLine:{color:"rgba(12,212,247,.3)",width:1,style:4},
-               horzLine:{color:"rgba(12,212,247,.3)",width:1,style:4}},
-    rightPriceScale:{borderColor:"#1a2d44",scaleMargins:{top:.05,bottom:.05}},
-    timeScale:{visible:false},
-  });
-
-  // Sync crosshair
-  chart.timeScale().subscribeVisibleLogicalRangeChange(range => {
-    if(range) subChart.timeScale().setVisibleLogicalRange(range);
-  });
-
-  // Crosshair move → OHLCV
-  chart.subscribeCrosshairMove(param => {
-    if(!param.time || !S.data) return;
-    const bar = param.seriesData.get(candleSeries);
-    if(bar) {
-      document.getElementById("ov-o").textContent = fmt(bar.open);
-      document.getElementById("ov-h").textContent = fmt(bar.high);
-      document.getElementById("ov-l").textContent = fmt(bar.low);
-      document.getElementById("ov-c").textContent = fmt(bar.close);
+async function checkHealth(){
+  try{
+    const r = await fetch('/health');
+    const d = await r.json();
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusTxt');
+    if(d.status==='ok'){
+      dot.style.background='var(--green)'; txt.textContent='Online';
     }
-    const vol = param.seriesData.get(volSeries);
-    if(vol) document.getElementById("ov-v").textContent = fmtVol(vol.value||0);
+  }catch{
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusTxt');
+    dot.style.background='var(--yellow)'; txt.textContent='Offline';
+  }
+}
+checkHealth();
+
+const CHART_OPT = {
+  layout:{background:{color:'#030810'},textColor:'#7a9cbf'},
+  grid:{vertLines:{color:'#192b44',style:1},horzLines:{color:'#192b44',style:1}},
+  crosshair:{mode:LightweightCharts.CrosshairMode.Normal,
+    vertLine:{color:'rgba(0,200,245,.5)',width:1,style:1,labelBackgroundColor:'#0d1929'},
+    horzLine:{color:'rgba(0,200,245,.5)',width:1,style:1,labelBackgroundColor:'#0d1929'}},
+  rightPriceScale:{borderColor:'#192b44',textColor:'#7a9cbf'},
+  timeScale:{borderColor:'#192b44',textColor:'#7a9cbf',timeVisible:true,secondsVisible:false},
+  handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true},
+  handleScale:{axisPressedMouseMove:true,mouseWheel:true,pinch:true},
+};
+
+const SUB_OPT = (h) => ({
+  height:h,
+  layout:{background:{color:'#030810'},textColor:'#7a9cbf'},
+  grid:{vertLines:{color:'#192b44',style:1},horzLines:{color:'#192b44',style:1}},
+  crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
+  rightPriceScale:{borderColor:'#192b44',textColor:'#7a9cbf',scaleMargins:{top:.05,bottom:.05}},
+  timeScale:{visible:false},
+  handleScroll:false, handleScale:false,
+});
+
+function initCharts(){
+  const mc = document.getElementById('mainChart');
+  mainChart = LightweightCharts.createChart(mc, {...CHART_OPT});
+  mainChart.timeScale().fitContent();
+
+  mainSeries = mainChart.addCandlestickSeries({
+    upColor:'#00d97e', downColor:'#f04060',
+    borderVisible:false,
+    wickUpColor:'#00d97e', wickDownColor:'#f04060',
   });
 
-  window.addEventListener("resize", resizeCharts);
-}
+  mainChart.subscribeCrosshairMove(param => {
+    const lg = document.getElementById('chartLegend');
+    const ci = document.getElementById('crosshairInfo');
+    if(!param.time || !param.seriesData){ lg.style.display='none'; ci.style.display='none'; return; }
+    const d = param.seriesData.get(mainSeries);
+    if(!d) return;
+    lg.style.display='flex'; ci.style.display='flex';
+    document.getElementById('lgO').textContent = fmt(d.open);
+    document.getElementById('lgH').textContent = fmt(d.high);
+    document.getElementById('lgL').textContent = fmt(d.low);
+    document.getElementById('lgC').textContent = fmt(d.close);
+    const chg = ((d.close-d.open)/d.open*100).toFixed(2);
+    const lgChg = document.getElementById('lgChg');
+    lgChg.textContent = (chg>=0?'▲':'')+chg+'%';
+    lgChg.className = 'legend-chg '+(chg>=0?'up':'dn');
+    const dt = new Date(param.time*1000);
+    document.getElementById('ciDate').textContent = dt.toLocaleDateString('vi-VN');
+    document.getElementById('ciPrice').textContent = fmt(d.close);
+  });
 
-function resizeCharts() {
-  const mc = document.getElementById("main-chart");
-  const sc = document.getElementById("sub-chart");
-  if(chart)    chart.resize(mc.clientWidth, mc.clientHeight);
-  if(subChart) subChart.resize(sc.clientWidth, sc.clientHeight);
-}
+  volChart = LightweightCharts.createChart(document.getElementById('volChart'), SUB_OPT(80));
+  volSeries = volChart.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:''});
 
-// ═══════════════════════════════════════════════════════
-// CHART RENDERING
-// ═══════════════════════════════════════════════════════
+  rsiChart = LightweightCharts.createChart(document.getElementById('rsiChart'), SUB_OPT(90));
+  rsiSeries = rsiChart.addLineSeries({color:'#00c8f5',lineWidth:1.5,priceLineVisible:false});
+  rsiChart.addLineSeries({color:'rgba(240,64,96,.5)',lineWidth:.8,lineStyle:2,priceLineVisible:false}).setData([{time:0,value:70},{time:9999999999,value:70}]);
+  rsiChart.addLineSeries({color:'rgba(0,217,126,.5)',lineWidth:.8,lineStyle:2,priceLineVisible:false}).setData([{time:0,value:30},{time:9999999999,value:30}]);
 
-function renderCharts(d) {
-  // Filter by period
-  const ohlcv = filterPeriod(d.ohlcv, S.period);
-  const inds   = d.indicators || {};
-  const fc     = d.forecast   || {};
+  macdChart = LightweightCharts.createChart(document.getElementById('macdChart'), SUB_OPT(90));
+  macdLineSeries = macdChart.addLineSeries({color:'#00c8f5',lineWidth:1.5,priceLineVisible:false});
+  macdSigSeries = macdChart.addLineSeries({color:'#edb84a',lineWidth:1.2,priceLineVisible:false});
+  macdHistSeries = macdChart.addHistogramSeries({priceLineVisible:false,priceFormat:{type:'price',minMove:.01}});
 
-  // Main candles
-  candleSeries.setData(ohlcv);
+  stochChart = LightweightCharts.createChart(document.getElementById('stochChart'), SUB_OPT(90));
+  stochKSeries = stochChart.addLineSeries({color:'#9b7fe8',lineWidth:1.4,priceLineVisible:false});
+  stochDSeries = stochChart.addLineSeries({color:'#edb84a',lineWidth:1.2,priceLineVisible:false});
 
-  // Volume
-  const volData = ohlcv.map(b => ({
-    time: b.time, value: b.volume,
-    color: b.close >= b.open ? "rgba(0,230,122,.4)" : "rgba(240,64,96,.4)"
-  }));
-  volSeries.setData(volData);
+  adxChart = LightweightCharts.createChart(document.getElementById('adxChart'), SUB_OPT(90));
+  adxSeries = adxChart.addLineSeries({color:'#9b7fe8',lineWidth:1.5,priceLineVisible:false});
 
-  // Remove old overlay series
-  Object.values(S.series).forEach(s => { try{chart.removeSeries(s)}catch(e){} });
-  S.series = {};
+  obvChart = LightweightCharts.createChart(document.getElementById('obvChart'), SUB_OPT(90));
+  obvSeries = obvChart.addLineSeries({color:'#ff8c42',lineWidth:1.5,priceLineVisible:false});
 
-  // ── Overlays ────────────────────────────────────────
-  const COLORS = {
-    sma20:"#0cd4f7",sma50:"#f0b429",sma200:"#a78bfa",
-    ema9:"#ff9240",ema21:"#f06292",
-    bb_upper:"rgba(12,212,247,.5)",bb_lower:"rgba(12,212,247,.5)",bb_middle:"rgba(12,212,247,.25)",
-    vwap:"#a78bfa",tenkan:"#f04060",kijun:"#0cd4f7",
-  };
-
-  function addLine(key, color, width=1, dashed=false) {
-    const pts = inds[key];
-    if(!pts || !pts.length) return;
-    const s = chart.addLineSeries({
-      color, lineWidth:width,
-      lineStyle: dashed ? LightweightCharts.LineStyle.Dashed : LightweightCharts.LineStyle.Solid,
-      priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false,
+  mainChart.timeScale().subscribeVisibleLogicalRangeChange(range => {
+    if(!range) return;
+    [volChart,rsiChart,macdChart,stochChart,adxChart,obvChart].forEach(c => {
+      c && c.timeScale().setVisibleLogicalRange(range);
     });
-    s.setData(filterPeriod(pts, S.period));
-    S.series[key] = s;
-  }
+  });
 
-  if(S.activeInds.has("sma20"))  addLine("sma20",  COLORS.sma20, 1.5);
-  if(S.activeInds.has("sma50"))  addLine("sma50",  COLORS.sma50, 1.5);
-  if(S.activeInds.has("sma200")) addLine("sma200", COLORS.sma200, 1.5);
-  if(S.activeInds.has("ema9"))   addLine("ema9",   COLORS.ema9);
-  if(S.activeInds.has("ema21"))  addLine("ema21",  COLORS.ema21);
-
-  if(S.activeInds.has("bb")) {
-    addLine("bb_upper",  COLORS.bb_upper, 1, true);
-    addLine("bb_middle", COLORS.bb_middle,1, true);
-    addLine("bb_lower",  COLORS.bb_lower, 1, true);
-  }
-  if(S.activeInds.has("vwap"))  addLine("vwap",  COLORS.vwap, 1.5, true);
-  if(S.activeInds.has("ichimoku")) {
-    addLine("tenkan", COLORS.tenkan);
-    addLine("kijun",  COLORS.kijun);
-    // Ichimoku cloud (area)
-    if(inds.ichimoku_a && inds.ichimoku_b) {
-      const sa = chart.addLineSeries({color:"rgba(12,212,247,.15)",lineWidth:0.5,
-        priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
-      sa.setData(filterPeriod(inds.ichimoku_a,S.period));
-      S.series["ichi_a"] = sa;
-      const sb = chart.addLineSeries({color:"rgba(240,64,96,.15)",lineWidth:0.5,
-        priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
-      sb.setData(filterPeriod(inds.ichimoku_b,S.period));
-      S.series["ichi_b"] = sb;
+  mainChart.subscribeClick(param => {
+    if(drawTool === 'hline' && param.price !== undefined){
+      const pl = mainSeries.createPriceLine({
+        price: param.price, color:'#edb84a', lineWidth:1, lineStyle:2,
+        axisLabelVisible:true, title:`${fmt(param.price)}`
+      });
+      drawings.push({type:'hline', obj:pl});
     }
-  }
-
-  // S/R lines
-  if(S.activeInds.has("sr")) {
-    const tech = d.technical || {};
-    [["support1","#00e67a",true],["support2","rgba(0,230,122,.5)",true],
-     ["resistance1","#f04060",true],["resistance2","rgba(240,64,96,.5)",true]].forEach(([k,c,d])=>{
-      if(tech[k]){
-        const s=chart.addLineSeries({color:c,lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dotted,
-          priceLineVisible:false,lastValueVisible:true,crosshairMarkerVisible:false});
-        const pts = ohlcv.slice(-1).map(b=>({time:ohlcv[0].time,value:tech[k]}))
-                    .concat([{time:ohlcv[ohlcv.length-1].time,value:tech[k]}]);
-        s.setData([{time:ohlcv[0].time,value:tech[k]},{time:ohlcv[ohlcv.length-1].time,value:tech[k]}]);
-        S.series["sr_"+k] = s;
+    if(drawTool === 'tline'){
+      if(!drawState){
+        drawState = {price:param.price, time:param.time};
+        toast('🎯 Chọn điểm thứ 2 cho đường xu hướng', 'info');
+      } else {
+        const tl = mainChart.addLineSeries({color:'#edb84a',lineWidth:1.5,lineStyle:1,priceLineVisible:false,lastValueVisible:false});
+        tl.setData([
+          {time:drawState.time, value:drawState.price},
+          {time:param.time, value:param.price}
+        ]);
+        drawings.push({type:'tline', obj:tl});
+        drawState = null;
+        toast('✅ Đường xu hướng đã vẽ', 'ok');
       }
-    });
-  }
-
-  // Pivot points
-  if(S.activeInds.has("pivot") && d.technical) {
-    const tech = d.technical;
-    [["pivot_pp","#f0b429"],["pivot_r1","rgba(240,64,96,.7)"],["pivot_s1","rgba(0,230,122,.7)"]].forEach(([k,c])=>{
-      if(tech[k]){
-        const s=chart.addLineSeries({color:c,lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dotted,
-          priceLineVisible:false,lastValueVisible:true});
-        s.setData([{time:ohlcv[0].time,value:tech[k]},{time:ohlcv[ohlcv.length-1].time,value:tech[k]}]);
-        S.series["piv_"+k]=s;
+    }
+    if(drawTool === 'fib' && param.price !== undefined){
+      // Simplified Fibonacci - draw retracement levels
+      const price = param.price;
+      const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+      levels.forEach(lvl => {
+        const pl = mainSeries.createPriceLine({
+          price: price * (1 - lvl * 0.1),
+          color: lvl === 0.5 ? '#ff8c42' : '#7a9cbf',
+          lineWidth: lvl === 0.5 ? 1.5 : 0.8,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: `${(lvl*100).toFixed(1)}%`
+        });
+        drawings.push({type:'fib', obj:pl});
+      });
+      toast('✅ Fibonacci Retracement đã vẽ', 'ok');
+    }
+    if(drawTool === 'rect'){
+      if(!drawState){
+        drawState = {price:param.price, time:param.time};
+        toast('🎯 Chọn góc đối diện', 'info');
+      } else {
+        // Rectangle using two horizontal lines
+        const top = Math.max(drawState.price, param.price);
+        const bottom = Math.min(drawState.price, param.price);
+        const pl1 = mainSeries.createPriceLine({price:top, color:'#9b7fe8', lineWidth:1, lineStyle:2, axisLabelVisible:false});
+        const pl2 = mainSeries.createPriceLine({price:bottom, color:'#9b7fe8', lineWidth:1, lineStyle:2, axisLabelVisible:false});
+        drawings.push({type:'rect', obj:[pl1, pl2]});
+        drawState = null;
+        toast('✅ Rectangle đã vẽ', 'ok');
       }
-    });
-  }
-
-  // ── LSTM / Forecast overlay ──────────────────────────
-  if(S.activeInds.has("forecast") && fc.forecast_points) {
-    // Ensemble forecast
-    const ens = chart.addLineSeries({
-      color:"#f0b429", lineWidth:2,
-      lineStyle:LightweightCharts.LineStyle.Dashed,
-      priceLineVisible:false, lastValueVisible:true,
-      title:"Dự báo",
-    });
-    ens.setData(fc.forecast_points);
-    S.series["ens_fc"] = ens;
-
-    // LSTM forecast
-    if(fc.lstm_points && fc.lstm_points.length) {
-      const lstm = chart.addLineSeries({
-        color:"#a78bfa", lineWidth:1.5,
-        lineStyle:LightweightCharts.LineStyle.Solid,
-        priceLineVisible:false,lastValueVisible:true,
-        title:"LSTM",
-      });
-      lstm.setData(fc.lstm_points);
-      S.series["lstm_fc"] = lstm;
     }
-
-    // Upper/lower band (shading via two lines)
-    if(fc.upper_points) {
-      const up = chart.addLineSeries({
-        color:"rgba(240,180,41,.2)",lineWidth:1,
-        lineStyle:LightweightCharts.LineStyle.Dotted,
-        priceLineVisible:false,lastValueVisible:false,
-      });
-      up.setData(fc.upper_points); S.series["fc_up"]=up;
-    }
-    if(fc.lower_points) {
-      const lo = chart.addLineSeries({
-        color:"rgba(240,180,41,.2)",lineWidth:1,
-        lineStyle:LightweightCharts.LineStyle.Dotted,
-        priceLineVisible:false,lastValueVisible:false,
-      });
-      lo.setData(fc.lower_points); S.series["fc_lo"]=lo;
-    }
-  }
-
-  // ── Sub-chart (oscillator) ────────────────────────────
-  Object.values(S.subSeries).forEach(s=>{try{subChart.removeSeries(s)}catch(e){}});
-  S.subSeries={};
-  const subWrap = document.getElementById("sub-charts");
-
-  let showSub = false;
-  if(S.activeInds.has("rsi") && inds.rsi) {
-    showSub=true; S.subLabel="RSI(14)";
-    const rsiS = subChart.addLineSeries({color:"#a78bfa",lineWidth:1.5,priceLineVisible:false,lastValueVisible:true,title:"RSI"});
-    rsiS.setData(filterPeriod(inds.rsi,S.period));
-    // OB/OS lines
-    const ob = subChart.addLineSeries({color:"rgba(240,64,96,.5)",lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false});
-    const os = subChart.addLineSeries({color:"rgba(0,230,122,.5)",lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false});
-    const pts = filterPeriod(inds.rsi,S.period);
-    if(pts.length){
-      const t0=pts[0].time,t1=pts[pts.length-1].time;
-      ob.setData([{time:t0,value:70},{time:t1,value:70}]);
-      os.setData([{time:t0,value:30},{time:t1,value:30}]);
-    }
-    S.subSeries={rsi:rsiS,ob,os};
-  } else if(S.activeInds.has("macd") && inds.macd_line) {
-    showSub=true; S.subLabel="MACD";
-    const ml=subChart.addLineSeries({color:"#0cd4f7",lineWidth:1.5,priceLineVisible:false,lastValueVisible:true});
-    const ms=subChart.addLineSeries({color:"#f04060",lineWidth:1.5,priceLineVisible:false,lastValueVisible:true});
-    const mh=subChart.addHistogramSeries({priceLineVisible:false,lastValueVisible:false});
-    ml.setData(filterPeriod(inds.macd_line,S.period));
-    ms.setData(filterPeriod(inds.macd_signal,S.period));
-    mh.setData(filterPeriod(inds.macd_hist,S.period));
-    S.subSeries={ml,ms,mh};
-  } else if(S.activeInds.has("stoch") && inds.stoch_k) {
-    showSub=true; S.subLabel="Stoch";
-    const sk=subChart.addLineSeries({color:"#0cd4f7",lineWidth:1.5,priceLineVisible:false,lastValueVisible:true});
-    const sd=subChart.addLineSeries({color:"#f0b429",lineWidth:1,priceLineVisible:false,lastValueVisible:true});
-    sk.setData(filterPeriod(inds.stoch_k,S.period));
-    sd.setData(filterPeriod(inds.stoch_d,S.period));
-    S.subSeries={sk,sd};
-  }
-
-  if(showSub) {
-    subWrap.style.display="flex";
-    subChart.resize(document.getElementById("sub-chart").clientWidth, SUB_H);
-    subChart.timeScale().scrollToRealTime();
-  } else {
-    subWrap.style.display="none";
-  }
-
-  chart.timeScale().fitContent();
-  subChart.timeScale().fitContent();
-}
-
-// ═══════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════
-
-function filterPeriod(data, per) {
-  if(!data || !data.length) return data||[];
-  if(per === "all") return data;
-  const now = data[data.length-1].time || data[data.length-1].tradingDate;
-  const ms  = {  "1m":30,"3m":90,"6m":180,"1y":365 }[per] || 180;
-  const cutoff = (typeof now === "number" ? now : parseInt(now)) - ms*86400;
-  return data.filter(d=>(d.time||d.tradingDate) >= cutoff);
-}
-
-function fmt(v) {
-  if(v == null||v === "N/A") return "–";
-  const n = parseFloat(v);
-  if(isNaN(n)) return v;
-  if(n >= 1000) return n.toLocaleString("vi-VN");
-  return n.toFixed(n < 10 ? 3 : 0);
-}
-
-function fmtVol(v) {
-  if(!v) return "–";
-  if(v>=1e9) return (v/1e9).toFixed(2)+"B";
-  if(v>=1e6) return (v/1e6).toFixed(1)+"M";
-  if(v>=1e3) return (v/1e3).toFixed(0)+"K";
-  return v.toString();
-}
-
-function colorClass(v) {
-  if(!v||v==="N/A") return "fl";
-  const n=parseFloat(v);
-  return n>0?"up":n<0?"dn":"fl";
-}
-
-function toast(msg, dur=2800) {
-  const t=document.getElementById("toast");
-  t.textContent=msg; t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"), dur);
-}
-
-// ═══════════════════════════════════════════════════════
-// LOADING STEPS
-// ═══════════════════════════════════════════════════════
-let loadTimer;
-function showLoader() {
-  document.getElementById("loader").style.display="flex";
-  ["ls1","ls2","ls3","ls4","ls5"].forEach(id=>{
-    const el=document.getElementById(id);
-    el.className="ld-step";
   });
-  let step=0;
-  const steps=["ls1","ls2","ls3","ls4","ls5"];
-  const delays=[0,800,2500,6000,9000];
-  steps.forEach((id,i)=>{
-    setTimeout(()=>{
-      if(i>0) document.getElementById(steps[i-1]).classList.remove("act");
-      if(i>0) document.getElementById(steps[i-1]).classList.add("done");
-      document.getElementById(id).classList.add("act");
-    }, delays[i]);
+
+  handleResize();
+  window.addEventListener('resize', handleResize);
+}
+
+function handleResize(){
+  const mc = document.getElementById('mainChart');
+  if(mc && mainChart){
+    mainChart.applyOptions({width:mc.offsetWidth, height:mc.offsetHeight});
+  }
+  ['vol','rsi','macd','stoch','adx','obv'].forEach(k => {
+    const cont = document.getElementById(k+'Chart');
+    const ch = window[k+'Chart'];
+    if(cont && ch) ch.applyOptions({width:cont.offsetWidth, height:cont.offsetHeight});
   });
 }
-function hideLoader() {
-  ["ls1","ls2","ls3","ls4","ls5"].forEach(id=>{
-    document.getElementById(id).classList.add("done");
-    document.getElementById(id).classList.remove("act");
+
+function loadChartData(data){
+  const ohlcv = data.ohlcv || [];
+  const ind = data.indicators || {};
+  const fc = data.forecast || {};
+
+  mainSeries.setData(ohlcv.map(d => ({
+    time:d.time, open:d.open, high:d.high, low:d.low, close:d.close
+  })));
+
+  volSeries.setData(ohlcv.map(d => ({
+    time:d.time, value:d.volume,
+    color: d.close >= d.open ? 'rgba(0,217,126,.55)' : 'rgba(240,64,96,.55)'
+  })));
+
+  document.getElementById('lgSym').textContent = data.symbol || '';
+  document.getElementById('chartLegend').style.display = 'flex';
+  document.getElementById('crosshairInfo').style.display = 'flex';
+
+  _setSeries('sma20', ind.sma20 || [], () => {
+    sma20s = mainChart.addLineSeries({color:'#f0c040',lineWidth:1.3,priceLineVisible:false,lastValueVisible:false});
+    return sma20s;
   });
-  setTimeout(()=>document.getElementById("loader").style.display="none", 400);
-}
-
-// ═══════════════════════════════════════════════════════
-// ANALYZE
-// ═══════════════════════════════════════════════════════
-async function analyze() {
-  const sym = document.getElementById("symInput").value.trim().toUpperCase();
-  if(!sym) { toast("⚠️ Vui lòng nhập mã cổ phiếu"); return; }
-
-  const btn = document.getElementById("analyzeBtn");
-  btn.disabled = true;
-  document.getElementById("welcome").style.display="none";
-  showLoader();
-
-  try {
-    const fd = new FormData();
-    fd.append("symbol", sym);
-    fd.append("type", "stock");
-    const res = await fetch("/api/analyze", {method:"POST",body:fd});
-    const result = await res.json();
-    hideLoader();
-
-    if(result.error) { toast("❌ "+result.error, 4000); return; }
-
-    S.data = result.data;
-    renderAll(result.data);
-    toast(`✅ ${sym} — ${S.data.data_source || ""} — ${S.data.elapsed_s||""}s`);
-  } catch(e) {
-    hideLoader();
-    toast("❌ Lỗi kết nối: "+e.message, 4000);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function renderAll(d) {
-  // Price header
-  document.getElementById("price-hd").style.display="flex";
-  document.getElementById("ohlcv-row").style.display="flex";
-  const tech = d.technical||{};
-  const cp   = tech.current_price||0;
-  document.getElementById("ph-sym").textContent = d.symbol;
-  const prEl = document.getElementById("ph-price");
-  prEl.textContent = cp ? cp.toLocaleString("vi-VN") : "–";
-  prEl.className = "fl";
-
-  const rec = d.recommendation||"WATCH";
-  const recEl = document.getElementById("ph-rec");
-  recEl.textContent = rec;
-  recEl.className = `rec-badge rec-${rec}`;
-
-  if(d.data_source) {
-    const src=document.getElementById("ph-src");
-    src.textContent="🔗 "+d.data_source; src.style.display="block";
-  }
-
-  // OHLCV last bar
-  const last = (d.ohlcv||[]).slice(-1)[0]||{};
-  document.getElementById("ov-o").textContent = fmt(last.open);
-  document.getElementById("ov-h").textContent = fmt(last.high);
-  document.getElementById("ov-l").textContent = fmt(last.low);
-  document.getElementById("ov-c").textContent = fmt(last.close);
-  document.getElementById("ov-v").textContent = fmtVol(last.volume);
-
-  renderCharts(d);
-  renderRPanel(d);
-}
-
-// ═══════════════════════════════════════════════════════
-// RIGHT PANEL TABS
-// ═══════════════════════════════════════════════════════
-function showRTab(tab) {
-  S.activeRTab = tab;
-  document.querySelectorAll(".rtab").forEach((el,i)=>{
-    const tabs=["ai","tech","fc","news"];
-    el.classList.toggle("on", tabs[i]===tab);
+  _setSeries('sma50', ind.sma50 || [], () => {
+    sma50s = mainChart.addLineSeries({color:'#ff8c42',lineWidth:1.5,priceLineVisible:false,lastValueVisible:false});
+    return sma50s;
   });
-  if(S.data) renderRPanel(S.data);
-}
+  _setSeries('sma200', ind.sma200 || [], () => {
+    sma200s = mainChart.addLineSeries({color:'#f06292',lineWidth:1.5,priceLineVisible:false,lastValueVisible:false});
+    return sma200s;
+  });
+  _setSeries('ema9', ind.ema9 || [], () => {
+    ema9s = mainChart.addLineSeries({color:'#9b7fe8',lineWidth:1.2,priceLineVisible:false,lastValueVisible:false});
+    return ema9s;
+  });
+  _setSeries('ema21', ind.ema21 || [], () => {
+    ema21s = mainChart.addLineSeries({color:'#64b5f6',lineWidth:1.2,priceLineVisible:false,lastValueVisible:false});
+    return ema21s;
+  });
+  _setSeries('ema50', ind.ema50 || [], () => {
+    ema50s = mainChart.addLineSeries({color:'#00e676',lineWidth:1.2,priceLineVisible:false,lastValueVisible:false});
+    return ema50s;
+  });
 
-function renderRPanel(d) {
-  const body = document.getElementById("rpanel-body");
-  const tab  = S.activeRTab;
-
-  if(tab==="ai") {
-    const ai = d.analysis||"";
-    body.innerHTML = `<div id="ai-report">${marked.parse(ai)}</div>`;
-  }
-
-  else if(tab==="tech") {
-    const t = d.technical||{};
-    const f = d.fundamental||{};
-    body.innerHTML = renderTech(t, f);
-  }
-
-  else if(tab==="fc") {
-    const fc = d.forecast||{};
-    body.innerHTML = renderForecast(fc);
-  }
-
-  else if(tab==="news") {
-    const news = d.news||[];
-    if(!news.length) {
-      body.innerHTML=`<div style="color:var(--t3);font-family:'JetBrains Mono';font-size:.65rem;padding:20px;text-align:center">Không có tin tức gần đây</div>`;
-      return;
+  if(ind.bb_upper){
+    if(!bbUs){
+      bbUs = mainChart.addLineSeries({color:'rgba(0,200,245,.45)',lineWidth:.9,priceLineVisible:false,lastValueVisible:false,lineStyle:2});
+      bbMs = mainChart.addLineSeries({color:'rgba(0,200,245,.75)',lineWidth:1.2,priceLineVisible:false,lastValueVisible:false});
+      bbLs = mainChart.addLineSeries({color:'rgba(0,200,245,.45)',lineWidth:.9,priceLineVisible:false,lastValueVisible:false,lineStyle:2});
     }
-    body.innerHTML = news.map(n=>`
-      <div class="news-item">
-        <div class="ni-title">${n.title}</div>
-        <div class="ni-body">${n.body}</div>
-        ${n.url?`<a class="ni-link" href="${n.url}" target="_blank">Đọc thêm →</a>`:""}
-      </div>`).join("");
+    bbUs.setData(ind.bb_upper);
+    bbMs.setData(ind.bb_middle);
+    bbLs.setData(ind.bb_lower);
+    setSeriesVis([bbUs,bbMs,bbLs], visible.bb);
   }
+
+  if(ind.vwap){
+    if(!vwapS) vwapS = mainChart.addLineSeries({color:'#26c6da',lineWidth:1.3,priceLineVisible:false,lastValueVisible:false,lineStyle:3});
+    vwapS.setData(ind.vwap);
+    vwapS.applyOptions({visible:visible.vwap});
+  }
+
+  if(ind.tenkan){
+    if(!tenkanS) tenkanS = mainChart.addLineSeries({color:'#ff5252',lineWidth:1.2,priceLineVisible:false,lastValueVisible:false});
+    if(!kijunS) kijunS = mainChart.addLineSeries({color:'#00e676',lineWidth:1.4,priceLineVisible:false,lastValueVisible:false});
+    if(!senkouAS) senkouAS = mainChart.addLineSeries({color:'rgba(0,230,118,.2)',lineWidth:.8,priceLineVisible:false,lastValueVisible:false});
+    if(!senkouBS) senkouBS = mainChart.addLineSeries({color:'rgba(255,82,82,.2)',lineWidth:.8,priceLineVisible:false,lastValueVisible:false});
+    tenkanS.setData(ind.tenkan);
+    kijunS.setData(ind.kijun);
+    senkouAS.setData(ind.senkou_a);
+    senkouBS.setData(ind.senkou_b);
+    tenkanS.applyOptions({visible:visible.ichi});
+    kijunS.applyOptions({visible:visible.ichi});
+    senkouAS.applyOptions({visible:visible.ichi});
+    senkouBS.applyOptions({visible:visible.ichi});
+  }
+
+  if(fc.forecast_points && fc.forecast_points.length){
+    const lastReal = ohlcv[ohlcv.length-1];
+    const fcData = [{time:lastReal.time, value:lastReal.close}, ...fc.forecast_points];
+    if(!fcSeries) fcSeries = mainChart.addLineSeries({color:'#00d97e',lineWidth:2,lineStyle:2,priceLineVisible:false,lastValueVisible:true});
+    if(!fcUpper) fcUpper = mainChart.addLineSeries({color:'rgba(0,217,126,.3)',lineWidth:.8,lineStyle:3,priceLineVisible:false,lastValueVisible:false});
+    if(!fcLower) fcLower = mainChart.addLineSeries({color:'rgba(0,217,126,.3)',lineWidth:.8,lineStyle:3,priceLineVisible:false,lastValueVisible:false});
+    fcSeries.setData(fcData);
+    fcUpper.setData([{time:lastReal.time,value:lastReal.close},...(fc.upper_points||[])]);
+    fcLower.setData([{time:lastReal.time,value:lastReal.close},...(fc.lower_points||[])]);
+    setSeriesVis([fcSeries,fcUpper,fcLower], visible.forecast);
+  }
+
+  if(ind.rsi) rsiSeries.setData(ind.rsi);
+  if(ind.macd_line) macdLineSeries.setData(ind.macd_line);
+  if(ind.macd_signal) macdSigSeries.setData(ind.macd_signal);
+  if(ind.macd_hist) macdHistSeries.setData(ind.macd_hist);
+  if(ind.stoch_k) stochKSeries.setData(ind.stoch_k);
+  if(ind.stoch_d) stochDSeries.setData(ind.stoch_d);
+  if(ind.adx) adxSeries.setData(ind.adx);
+  if(ind.obv) obvSeries.setData(ind.obv);
+
+  mainChart.timeScale().fitContent();
+  setSeriesVis([sma20s,sma50s,sma200s], visible.sma);
+  setSeriesVis([ema9s,ema21s,ema50s], visible.ema);
 }
 
-function renderTech(t, f) {
-  const kv = (k,v,cls="")=>`<div class="kv"><span class="kv-k">${k}</span><span class="kv-v ${cls}">${v||"–"}</span></div>`;
-  const cc = v => { const n=parseFloat(v); return n>0?"up":n<0?"dn":""; };
-
-  const rsi = parseFloat(t.rsi)||0;
-  const rsiCls = rsi>70?"dn":rsi<30?"up":"";
-
-  return `
-<div class="sect-hd">Chỉ báo động lượng</div>
-<div class="kv-grid">
-  ${kv("RSI(14)",   fmt(t.rsi), rsiCls)}
-  ${kv("Stoch%K",  fmt(t.stoch_k))}
-  ${kv("MACD",     fmt(t.macd), cc(t.macd_hist))}
-  ${kv("MFI",      fmt(t.mfi))}
-  ${kv("CCI",      fmt(t.cci))}
-  ${kv("ADX",      fmt(t.adx))}
-  ${kv("+DI",      fmt(t.plus_di),"up")}
-  ${kv("-DI",      fmt(t.minus_di),"dn")}
-</div>
-<div class="sect-hd">Xu hướng</div>
-<div class="kv-grid">
-  ${kv("Ngắn hạn",  t.trend_short||"–", t.trend_short==="TĂNG"?"up":"dn")}
-  ${kv("Trung hạn", t.trend_medium||"–", t.trend_medium==="TĂNG"?"up":"dn")}
-  ${kv("Dài hạn",   t.trend_long||"–",  t.trend_long==="TĂNG"?"up":"dn")}
-  ${kv("EMA9",      fmt(t.ema9))}
-  ${kv("SMA20",     fmt(t.sma20))}
-  ${kv("SMA50",     fmt(t.sma50))}
-  ${kv("SMA200",    fmt(t.sma200))}
-  ${kv("Tenkan",    fmt(t.tenkan))}
-</div>
-<div class="sect-hd">Hỗ trợ / Kháng cự</div>
-<div class="kv-grid">
-  ${kv("Support 1", fmt(t.support1),"up")}
-  ${kv("Support 2", fmt(t.support2),"up")}
-  ${kv("Resist 1",  fmt(t.resistance1),"dn")}
-  ${kv("Resist 2",  fmt(t.resistance2),"dn")}
-  ${kv("Pivot PP",  fmt(t.pivot_pp))}
-  ${kv("Pivot R1",  fmt(t.pivot_r1),"dn")}
-  ${kv("Pivot S1",  fmt(t.pivot_s1),"up")}
-  ${kv("ATR(14)",   fmt(t.atr))}
-</div>
-<div class="sect-hd">Cơ bản</div>
-<div class="kv-grid">
-  ${kv("P/E",     fmt(f.pe))}
-  ${kv("P/B",     fmt(f.pb))}
-  ${kv("ROE",     f.roe != null ? f.roe+"%" : "–")}
-  ${kv("ROA",     f.roa != null ? f.roa+"%" : "–")}
-  ${kv("EPS",     fmt(f.eps))}
-  ${kv("Beta",    fmt(f.beta))}
-  ${kv("DY",      f.dividend_yield != null ? f.dividend_yield+"%" : "–")}
-  ${kv("Ngành",   f.industry||f.source||"–")}
-</div>`;
+function _setSeries(key, pts, createFn){
+  if(!pts.length) return;
+  let s = window[key+'s'];
+  if(!s){ s = createFn(); window[key+'s'] = s; }
+  s.setData(pts);
 }
 
-function renderForecast(fc) {
-  const dir  = fc.direction||"N/A";
-  const dirCls = dir==="TĂNG"?"up":dir==="GIẢM"?"dn":"fl";
-  const conf = fc.confidence||"–";
-  const confCls = conf==="CAO"?"up":conf==="THẤP"?"dn":"fl";
-
-  return `
-<div class="lstm-card">
-  <div class="lstm-title">🤖 Mô hình LSTM NumPy v6.0</div>
-  <div class="kv-grid">
-    <div class="kv"><span class="kv-k">Trạng thái</span>
-      <span class="kv-v ${fc.lstm_available?"up":"dn"}">${fc.lstm_available?"✅ Đã train":"⚠️ Thấp"}</span></div>
-    <div class="kv"><span class="kv-k">Final Loss</span>
-      <span class="kv-v">${fc.lstm_final_loss||"–"}</span></div>
-  </div>
-  <div style="font-family:'JetBrains Mono';font-size:.58rem;color:var(--t3);margin-top:5px">
-    ${fc.method||""}
-  </div>
-</div>
-
-<div class="sect-hd">Dự báo giá</div>
-<div class="fc-bar">
-  <div class="fc-row"><span class="fc-lbl">Hướng xu hướng</span><span class="fc-val ${dirCls}">${dir}</span></div>
-  <div class="fc-row"><span class="fc-lbl">Độ tin cậy</span><span class="fc-val ${confCls}">${conf}</span></div>
-  <div class="fc-row"><span class="fc-lbl">R² (fit)</span><span class="fc-val">${fc.r_squared||"–"}</span></div>
-  <div class="fc-row"><span class="fc-lbl">Volatility</span><span class="fc-val">${fc.volatility||"–"}</span></div>
-</div>
-
-<div class="fc-bar">
-  <div class="fc-row"><span class="fc-lbl">Giá hiện tại</span><span class="fc-val">${fc.current_price?.toLocaleString("vi-VN")||"–"}</span></div>
-  <div class="fc-row"><span class="fc-lbl">Mục tiêu T+5</span><span class="fc-val up">${fc.target_1w?.toLocaleString("vi-VN")||"–"}</span></div>
-  <div class="fc-row"><span class="fc-lbl">Mục tiêu T+10</span><span class="fc-val up">${fc.target_2w?.toLocaleString("vi-VN")||"–"}</span></div>
-  <div class="fc-row"><span class="fc-lbl">Lợi nhuận kỳ vọng</span><span class="fc-val ${fc.expected_return_2w>0?"up":"dn"}">${fc.expected_return_2w||0}%</span></div>
-</div>
-
-<div class="sect-hd">Chiến lược giao dịch</div>
-<div class="fc-bar">
-  <div class="fc-row"><span class="fc-lbl">Stop Loss</span><span class="fc-val dn">${fc.stop_loss?.toLocaleString("vi-VN")||"–"}</span></div>
-  <div class="fc-row"><span class="fc-lbl">Take Profit 1</span><span class="fc-val up">${fc.take_profit_1?.toLocaleString("vi-VN")||"–"}</span></div>
-  <div class="fc-row"><span class="fc-lbl">Take Profit 2</span><span class="fc-val up">${fc.take_profit_2?.toLocaleString("vi-VN")||"–"}</span></div>
-</div>`;
+function setSeriesVis(arr, vis){
+  arr.forEach(s => s && s.applyOptions({visible:vis}));
 }
 
-// ═══════════════════════════════════════════════════════
-// MARKET OVERVIEW
-// ═══════════════════════════════════════════════════════
-async function loadMarket() {
-  try {
-    const res = await fetch("/api/market");
-    const data = await res.json();
-    const idx = data.indices||{};
-    const map = {
-      "VN-Index": ["vni-val","vni-chg"],
-      "HNX":      ["hnx-val","hnx-chg"],
-      "UPCOM":    ["upc-val","upc-chg"],
-      "VN30":     ["vn30-val","vn30-chg"],
-    };
-    for(const [name,[vid,cid]] of Object.entries(map)) {
-      const q = idx[name];
-      if(!q) continue;
-      const cls = q.pct>0?"up":q.pct<0?"dn":"fl";
-      document.getElementById(vid).textContent = q.close?.toLocaleString("vi-VN")||"–";
-      document.getElementById(vid).className = `idx-val ${cls}`;
-      document.getElementById(cid).textContent = (q.pct>0?"+":"")+q.pct+"%";
-      document.getElementById(cid).className = `idx-chg ${cls}`;
+function renderReport(data){
+  const sym = data.symbol || '--';
+  const mode = data.type || 'stock';
+  const typeMap = {stock:'Cổ phiếu · HOSE/HNX', fund:'Chứng chỉ quỹ', forex:'Cặp ngoại tệ'};
+  const rec = data.recommendation || 'WATCH';
+  const recMap = {BUY:'🟢 MUA', SELL:'🔴 BÁN', HOLD:'🟡 GIỮ', WATCH:'🔵 THEO DÕI'};
+  const fc = data.forecast || {};
+  const tech = data.technical || {};
+  const priceCount = (data.ohlcv||[]).length;
+  const source = data.source || 'KBS';
+
+  let html = `
+  <div class="report-wrap">
+    <div class="rec-header">
+      <div class="sym-block">
+        <div class="rec-sym">${sym}</div>
+        <div class="rec-meta">
+          <div class="rec-type">${typeMap[mode]||mode} · Nguồn: ${source}</div>
+          <div class="rec-time">${new Date().toLocaleString('vi-VN')}</div>
+        </div>
+      </div>
+      <div class="rec-badge rec-${rec}">${recMap[rec]||rec}</div>
+    </div>
+    <div class="badges">
+      <div class="badge ok">📡 ${priceCount} phiên · ${source}</div>
+      <div class="badge ok">📊 30+ chỉ báo</div>
+      ${data.fundamental && Object.keys(data.fundamental).length ? '<div class="badge ok">📋 Cơ bản</div>' : '<div class="badge warn">📋 Không có CB</div>'}
+      <div class="badge info">🧠 ${data.confidence||7}/10</div>
+      ${fc.method ? `<div class="badge ok">🧠 ${fc.method}</div>` : ''}
+      ${fc.direction ? `<div class="badge ${fc.direction==='TĂNG'?'ok':'warn'}">📐 ${fc.direction} R²=${fc.r_squared}</div>` : ''}
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <button class="copy-btn" onclick="copyReport()">📋 Sao chép</button>
+    </div>
+    <div class="report-body" id="reportBody">${mdToHtml(data.analysis||'')}</div>
+  </div>`;
+
+  document.getElementById('reportContent').innerHTML = html;
+}
+
+function renderForecast(data){
+  const fc = data.forecast || {};
+  if(!fc.direction){ document.getElementById('fcContent').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:.75rem">Không có dữ liệu dự báo.</div>'; return; }
+  
+  const isUp = fc.direction === 'TĂNG';
+  const html = `
+  <div class="fc-panel">
+    <div class="fc-card">
+      <div class="fc-card-title">🧠 ${fc.method||'LSTM Deep Learning'}</div>
+      <div class="fc-grid">
+        <div class="fc-item"><div class="fc-item-l">Xu hướng</div><div class="fc-item-v ${isUp?'up':'dn'}">${isUp?'▲ TĂNG':'▼ GIẢM'}</div></div>
+        <div class="fc-item"><div class="fc-item-l">Độ tin cậy</div><div class="fc-item-v">${fc.confidence||'--'}</div></div>
+        <div class="fc-item"><div class="fc-item-l">R² (Validation)</div><div class="fc-item-v">${fc.r_squared||'--'}</div></div>
+        <div class="fc-item"><div class="fc-item-l">Model</div><div class="fc-item-v">✅ LSTM</div></div>
+      </div>
+    </div>
+    <div class="fc-card">
+      <div class="fc-card-title">📈 Mục tiêu giá</div>
+      <div class="fc-grid">
+        <div class="fc-item"><div class="fc-item-l">Hiện tại</div><div class="fc-item-v">${fmtN(fc.current_price)}</div></div>
+        <div class="fc-item"><div class="fc-item-l">Dự báo T+5</div><div class="fc-item-v ${isUp?'up':'dn'}">${fmtN(fc.target_1w)}</div></div>
+        <div class="fc-item"><div class="fc-item-l">Dự báo T+10</div><div class="fc-item-v ${isUp?'up':'dn'}">${fmtN(fc.target_2w)}</div></div>
+        <div class="fc-item"><div class="fc-item-l">Lợi nhuận</div><div class="fc-item-v ${isUp?'up':'dn'}">${fc.expected_return_2w!==undefined?(fc.expected_return_2w>=0?'+':'')+fc.expected_return_2w+'%':'--'}</div></div>
+      </div>
+    </div>
+    <div class="fc-card">
+      <div class="fc-card-title">🎯 Chiến lược (AI gợi ý)</div>
+      <div class="fc-grid">
+        <div class="fc-item"><div class="fc-item-l">Stop Loss</div><div class="fc-item-v dn">${fmtN(fc.stop_loss)}</div></div>
+        <div class="fc-item"><div class="fc-item-l">Take Profit 1</div><div class="fc-item-v up">${fmtN(fc.take_profit_1)}</div></div>
+        <div class="fc-item"><div class="fc-item-l">Take Profit 2</div><div class="fc-item-v up">${fmtN(fc.take_profit_2)}</div></div>
+        <div class="fc-item"><div class="fc-item-l">Expected Return</div><div class="fc-item-v">${fc.expected_return_2w||'--'}%</div></div>
+      </div>
+    </div>
+    ${fc.forecast_5d && fc.forecast_5d.length ? `
+    <div class="fc-card">
+      <div class="fc-card-title">📅 Dự báo 5 phiên tới</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${fc.forecast_5d.map((v,i)=>`<div class="fc-item" style="flex:1;min-width:60px"><div class="fc-item-l">T+${i+1}</div><div class="fc-item-v" style="font-size:.76rem">${fmtN(v)}</div></div>`).join('')}
+      </div>
+    </div>` : ''}
+  </div>`;
+  document.getElementById('fcContent').innerHTML = html;
+}
+
+function renderFundamental(data){
+  const fund = data.fundamental || {};
+  const fi = data.fund_info || {};
+  const rows = [];
+
+  if(fund.pe != null) rows.push(['P/E Ratio', fund.pe, evalPE(fund.pe)]);
+  if(fund.pb != null) rows.push(['P/B Ratio', fund.pb, evalPB(fund.pb)]);
+  if(fund.roe != null) rows.push(['ROE (%)', fund.roe, evalROE(fund.roe)]);
+  if(fund.roa != null) rows.push(['ROA (%)', fund.roa, '']);
+  if(fund.eps != null) rows.push(['EPS', fund.eps, '']);
+  if(fund.beta != null) rows.push(['Beta', fund.beta, parseFloat(fund.beta)>1?'↑ Biến động cao':'↓ Ổn định']);
+  if(fund.market_cap) rows.push(['Vốn hóa (tỷ)', fund.market_cap, '']);
+  if(fund.outstanding) rows.push(['CP lưu hành', fund.outstanding, '']);
+  if(fund.dividend_yield) rows.push(['Cổ tức (%)', fund.dividend_yield, '']);
+  if(fund.industry) rows.push(['Ngành', fund.industry, '']);
+  if(fund.exchange) rows.push(['Sàn', fund.exchange, '']);
+  if(fund['52w_high']) rows.push(['Cao 52T', fmtN(fund['52w_high']), '']);
+  if(fund['52w_low']) rows.push(['Thấp 52T', fmtN(fund['52w_low']), '']);
+  if(fi.fund_name) rows.push(['Tên quỹ', fi.fund_name, '']);
+  if(fi.management_company) rows.push(['Công ty QL', fi.management_company, '']);
+  if(fi.latest_nav) rows.push(['NAV hiện tại', fmtN(fi.latest_nav), '']);
+  if(fi.risk_level) rows.push(['Mức rủi ro', fi.risk_level, '']);
+  if(fi.management_fee) rows.push(['Phí QL', fi.management_fee+'%', '']);
+
+  const html = rows.length ? `
+  <div style="overflow-x:auto">
+  <table class="fund-table">
+    <thead><tr><th>Chỉ số</th><th style="text-align:right">Giá trị</th><th>Đánh giá</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td>${r[0]}</td><td class="td-val">${r[1]}</td><td class="td-note">${r[2]}</td></tr>`).join('')}</tbody>
+  </table>
+  </div>` : '<div style="padding:20px;text-align:center;color:var(--text3);font-size:.75rem">Không có dữ liệu cơ bản</div>';
+
+  document.getElementById('fundContent').innerHTML = html;
+}
+
+function renderTechData(tech){
+  const g = document.getElementById('techDataGrid');
+  const items = [
+    ['Giá', fmtN(tech.current_price), ''],
+    ['RSI 14', tech.rsi, rsiCls(tech.rsi)],
+    ['MACD', tech.macd, macdCls(tech.macd, tech.macd_signal)],
+    ['BB Upper', fmtN(tech.bb_upper), ''],
+    ['BB Lower', fmtN(tech.bb_lower), ''],
+    ['BB Width %', fmtN(tech.bb_width), ''],
+    ['SMA 20', fmtN(tech.sma20), ''],
+    ['SMA 50', fmtN(tech.sma50), ''],
+    ['SMA 200', fmtN(tech.sma200), ''],
+    ['EMA 9', fmtN(tech.ema9), ''],
+    ['EMA 21', fmtN(tech.ema21), ''],
+    ['EMA 50', fmtN(tech.ema50), ''],
+    ['Stoch %K', tech.stoch_k, ''],
+    ['Stoch %D', tech.stoch_d, ''],
+    ['Williams%R', tech.williams_r, ''],
+    ['ATR 14', tech.atr, 'neu'],
+    ['ATR %', fmtN(tech.atr_pct), ''],
+    ['CCI', tech.cci, ''],
+    ['MFI', tech.mfi, ''],
+    ['ADX', tech.adx, ''],
+    ['+DI', tech.plus_di, ''],
+    ['-DI', tech.minus_di, ''],
+    ['VWAP', fmtN(tech.vwap), ''],
+    ['Momentum 10', tech.momentum_10, parseFloat(tech.momentum_10)>=0?'up':'dn'],
+    ['Momentum 20', tech.momentum_20, parseFloat(tech.momentum_20)>=0?'up':'dn'],
+    ['Volatility 20', fmtN(tech.volatility_20), ''],
+    ['Hỗ trợ 1', fmtN(tech.support1), 'up'],
+    ['Hỗ trợ 2', fmtN(tech.support2), 'up'],
+    ['Hỗ trợ 3', fmtN(tech.support3), 'up'],
+    ['Kháng cự 1', fmtN(tech.resistance1), 'dn'],
+    ['Kháng cự 2', fmtN(tech.resistance2), 'dn'],
+    ['Kháng cự 3', fmtN(tech.resistance3), 'dn'],
+    ['Pivot', fmtN(tech.pivot), ''],
+    ['Pivot R1', fmtN(tech.pivot_r1), 'dn'],
+    ['Pivot S1', fmtN(tech.pivot_s1), 'up'],
+    ['Fib 23.6%', fmtN(tech.fib_236), ''],
+    ['Fib 38.2%', fmtN(tech.fib_382), ''],
+    ['Fib 50%', fmtN(tech.fib_500), ''],
+    ['Fib 61.8%', fmtN(tech.fib_618), ''],
+    ['Trend NH', tech.trend_short, tech.trend_short==='TĂNG'?'up':'dn'],
+    ['Trend TH', tech.trend_medium, tech.trend_medium==='TĂNG'?'up':'dn'],
+    ['Trend DH', tech.trend_long, tech.trend_long==='TĂNG'?'up':'dn'],
+    ['Ichimoku', tech.trend_ichimoku, tech.trend_ichimoku==='TĂNG'?'up':'dn'],
+  ];
+  g.innerHTML = items.map(([l,v,c]) =>
+    `<div class="dc"><div class="dc-l">${l}</div><div class="dc-v ${c}">${v||'--'}</div></div>`
+  ).join('');
+}
+
+async function startAnalysis(){
+  const sym = (document.getElementById('symInput').value||'').trim().toUpperCase();
+  if(!sym){ toast('⚠ Nhập mã cổ phiếu/quỹ/forex', 'err'); return; }
+  currentSym = sym;
+
+  showLoading(sym);
+  document.getElementById('analyzeBtn').disabled = true;
+  clearOverlaySeries();
+
+  const fd = new FormData();
+  fd.append('symbol', sym);
+  fd.append('type', currentMode);
+
+  try{
+    const r = await fetch('/api/analyze', {method:'POST', body:fd});
+    clearLoadSteps();
+    if(!r.ok){
+      const e = await r.json().catch(()=>({}));
+      throw new Error(e.error || 'HTTP ' + r.status);
     }
-    document.getElementById("mkt-time").textContent = data.timestamp||"";
-    S.moversData = data.movers||{gainers:[],losers:[]};
-    showMovers(S.activeMoverTab);
-    renderTicker(idx);
-  } catch(e) {
-    console.warn("Market load:", e);
+    const json = await r.json();
+    apiData = json.data;
+
+    hideOverlay();
+    loadChartData(apiData);
+    renderReport(apiData);
+    renderForecast(apiData);
+    renderFundamental(apiData);
+    renderTechData(apiData.technical || {});
+    toast('✅ Phân tích xong: ' + sym + ' · ' + (apiData.source||'KBS'), 'ok');
+
+  } catch(err){
+    showError(err.message);
+    toast('❌ ' + err.message, 'err');
+  } finally{
+    document.getElementById('analyzeBtn').disabled = false;
   }
 }
 
-function renderTicker(indices) {
-  const ticker = document.getElementById("ticker");
-  const items = Object.entries(indices).map(([name,q])=>{
-    const cls = q.pct>0?"up":q.pct<0?"dn":"fl";
-    return `<div class="ti" onclick="quickLoad('${name}')">
-      <span class="ti-s">${name}</span>
-      <span class="ti-v">${q.close?.toLocaleString("vi-VN")||"–"}</span>
-      <span class="ti-c ${cls}">${q.pct>0?"+":""}${q.pct}%</span>
-    </div>`;
-  }).join("");
-  ticker.innerHTML = items;
+function quickLoad(sym, mode){
+  document.getElementById('symInput').value = sym;
+  if(mode) setMode(mode, document.querySelector(`.mode-tab[onclick*="${mode}"]`) || document.querySelector('.mode-tab'));
+  startAnalysis();
 }
 
-function showMovers(tab) {
-  S.activeMoverTab = tab;
-  document.getElementById("tab-gainer").classList.toggle("on", tab==="gainers");
-  document.getElementById("tab-loser").classList.toggle("on", tab==="losers");
-  const list = document.getElementById("mover-list");
-  const items = (S.moversData[tab]||[]);
-  if(!items.length) { list.innerHTML=`<div style="padding:10px 12px;font-family:'JetBrains Mono';font-size:.62rem;color:var(--t3)">Đang tải...</div>`; return; }
-  list.innerHTML = items.map(m=>{
-    const cls = m.pct>0?"up":m.pct<0?"dn":"fl";
-    return `<div class="mover-row" onclick="quickLoad('${m.code}')">
-      <span class="mv-code">${m.code}</span>
-      <span class="mv-prc">${fmt(m.close)}</span>
-      <span class="mv-pct ${cls}">${m.pct>0?"+":""}${m.pct}%</span>
-    </div>`;
-  }).join("");
+function setMode(mode, btn){
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.getElementById('symInput').placeholder = {
+    stock:'Mã CP: VCB', fund:'Mã quỹ: E1VF...', forex:'Cặp: USD.VND'
+  }[mode] || '';
 }
 
-// ═══════════════════════════════════════════════════════
-// QUICK LOAD
-// ═══════════════════════════════════════════════════════
-function quickLoad(sym) {
-  document.getElementById("symInput").value = sym;
-  analyze();
-}
-
-function loadSymbol(sym) { quickLoad(sym); }
-
-// ═══════════════════════════════════════════════════════
-// INDICATOR TOGGLES
-// ═══════════════════════════════════════════════════════
-document.querySelectorAll(".ibtn").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    const ind = btn.dataset.ind;
-    if(S.activeInds.has(ind)) { S.activeInds.delete(ind); btn.classList.remove("on","on-g"); }
-    else                      { S.activeInds.add(ind);   btn.classList.add(ind==="forecast"?"on-g":"on"); }
-    if(S.data) renderCharts(S.data);
+function clearOverlaySeries(){
+  [sma20s,sma50s,sma200s,ema9s,ema21s,ema50s,bbUs,bbMs,bbLs,fcSeries,fcUpper,fcLower,vwapS,tenkanS,kijunS,senkouAS,senkouBS].forEach(s=>{
+    if(s) try{ mainChart.removeSeries(s); } catch(e){}
   });
+  sma20s=sma50s=sma200s=ema9s=ema21s=ema50s=bbUs=bbMs=bbLs=fcSeries=fcUpper=fcLower=vwapS=tenkanS=kijunS=senkouAS=senkouBS=null;
+}
+
+function toggleInd(key, btn){
+  if(btn && btn.classList.contains('ind-toggle')){
+    btn.classList.toggle('on');
+    const isOn = btn.classList.contains('on');
+    _applyIndVis(key, isOn);
+    return;
+  }
+  if(btn) btn.classList.toggle('active');
+  const isActive = btn ? btn.classList.contains('active') : !visible[key];
+
+  if(key==='bb') { visible.bb = isActive; setSeriesVis([bbUs,bbMs,bbLs], isActive); }
+  else if(key==='sma') { visible.sma = isActive; setSeriesVis([sma20s,sma50s,sma200s], isActive); }
+  else if(key==='ema') { visible.ema = isActive; setSeriesVis([ema9s,ema21s,ema50s], isActive); }
+  else if(key==='ichi') { visible.ichi = isActive; setSeriesVis([tenkanS,kijunS,senkouAS,senkouBS], isActive); }
+  else if(key==='vwap') { visible.vwap = isActive; vwapS && vwapS.applyOptions({visible:isActive}); }
+  else if(key==='forecast') { visible.forecast = isActive; setSeriesVis([fcSeries,fcUpper,fcLower], isActive); }
+}
+
+function _applyIndVis(key, on){
+  if(key==='sma20') sma20s && sma20s.applyOptions({visible:on});
+  else if(key==='sma50') sma50s && sma50s.applyOptions({visible:on});
+  else if(key==='sma200') sma200s && sma200s.applyOptions({visible:on});
+  else if(key==='ema9') ema9s && ema9s.applyOptions({visible:on});
+  else if(key==='ema21') ema21s && ema21s.applyOptions({visible:on});
+  else if(key==='ema50') ema50s && ema50s.applyOptions({visible:on});
+  else if(key==='bb2') setSeriesVis([bbUs,bbMs,bbLs], on);
+  else if(key==='vwap2') vwapS && vwapS.applyOptions({visible:on});
+  else if(key==='tenkan') tenkanS && tenkanS.applyOptions({visible:on});
+  else if(key==='kijun') kijunS && kijunS.applyOptions({visible:on});
+  else if(key==='cloud') setSeriesVis([tenkanS,kijunS,senkouAS,senkouBS], on);
+}
+
+function toggleSub(key, btn){
+  if(btn) btn.classList.toggle('active');
+  const wrap = document.getElementById('sub'+key.charAt(0).toUpperCase()+key.slice(1));
+  if(wrap) wrap.classList.toggle('hidden');
+  handleResize();
+}
+
+function setChartType(type, btn){
+  chartType = type;
+  document.querySelectorAll('#btnCandle,#btnLine,#btnArea').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(!apiData) return;
+  const ohlcv = apiData.ohlcv || [];
+  if(mainSeries){ try{ mainChart.removeSeries(mainSeries); }catch(e){} mainSeries=null; }
+  if(type==='candle'){
+    mainSeries = mainChart.addCandlestickSeries({upColor:'#00d97e',downColor:'#f04060',borderVisible:false,wickUpColor:'#00d97e',wickDownColor:'#f04060'});
+    mainSeries.setData(ohlcv.map(d=>({time:d.time,open:d.open,high:d.high,low:d.low,close:d.close})));
+  } else if(type==='line'){
+    mainSeries = mainChart.addLineSeries({color:'#00c8f5',lineWidth:2,priceLineVisible:true});
+    mainSeries.setData(ohlcv.map(d=>({time:d.time,value:d.close})));
+  } else if(type==='area'){
+    mainSeries = mainChart.addAreaSeries({topColor:'rgba(0,200,245,.25)',bottomColor:'rgba(0,200,245,.02)',lineColor:'#00c8f5',lineWidth:2});
+    mainSeries.setData(ohlcv.map(d=>({time:d.time,value:d.close})));
+  }
+}
+
+function setDrawTool(tool, btn){
+  drawTool = tool; drawState = null;
+  document.querySelectorAll('.tb-btn[id^="tool"]').forEach(b=>b.classList.remove('active-tool'));
+  if(tool !== 'none' && btn) btn.classList.add('active-tool');
+  document.getElementById('mainChart').style.cursor = tool !== 'none' ? 'crosshair' : 'default';
+}
+
+function clearDrawings(){
+  drawings.forEach(d=>{
+    if(d.type === 'rect' && Array.isArray(d.obj)){
+      d.obj.forEach(o => { try{ mainSeries.removePriceLine(o); }catch(e){} });
+    } else if(d.type === 'tline' && d.obj.series){
+      try{ mainChart.removeSeries(d.obj); }catch(e){}
+    } else if(d.obj){
+      try{ mainSeries.removePriceLine(d.obj); }catch(e){}
+    }
+  });
+  drawings = [];
+  toast('🗑 Đã xóa tất cả drawings', 'ok');
+}
+
+function setTF(btn, tf){
+  document.querySelectorAll('.ind-toolbar .tool-group:first-child .tb-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  toast('Timeframe: ' + tf + ' (cần kết nối backend)', 'info');
+}
+
+function showLoading(sym){
+  document.getElementById('chartOverlayWrap').style.pointerEvents = 'auto';
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('loadText').textContent = 'Đang phân tích ' + sym + '...';
+  document.getElementById('errorBox').classList.remove('show');
+  const ids = ['ls1','ls2','ls3','ls4','ls5','ls6'];
+  ids.forEach(id => { const el=document.getElementById(id); el.classList.remove('active','done'); });
+  let i = 0;
+  clearInterval(stepTimer);
+  stepTimer = setInterval(()=>{
+    if(i>0) { const el=document.getElementById(ids[i-1]); el.classList.remove('active'); el.classList.add('done'); }
+    if(i<ids.length){ document.getElementById(ids[i]).classList.add('active'); i++; }
+    else clearInterval(stepTimer);
+  }, 2500);
+}
+
+function hideOverlay(){
+  clearInterval(stepTimer);
+  document.getElementById('chartOverlayWrap').style.pointerEvents = 'none';
+  document.getElementById('loading').classList.remove('show');
+  document.getElementById('welcome').style.display = 'none';
+}
+
+function showError(msg){
+  clearInterval(stepTimer);
+  document.getElementById('chartOverlayWrap').style.pointerEvents = 'none';
+  document.getElementById('loading').classList.remove('show');
+  document.getElementById('welcome').style.display = 'none';
+  const eb = document.getElementById('errorBox');
+  eb.classList.add('show');
+  eb.innerHTML = `⚠️ <strong>Lỗi:</strong> ${msg}<br><small style="color:var(--text3)">Kiểm tra mã, kết nối mạng hoặc backend logs.</small>`;
+  document.getElementById('reportContent').innerHTML = `<div id="errorBox" class="show">⚠️ ${msg}</div>`;
+}
+
+function clearLoadSteps(){
+  clearInterval(stepTimer);
+  ['ls1','ls2','ls3','ls4','ls5','ls6'].forEach(id=>{
+    const el = document.getElementById(id);
+    el.classList.remove('active');
+    el.classList.add('done');
+  });
+}
+
+function switchSTab(id, el){
+  document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.sidebar-panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('sp-'+id).classList.add('active');
+}
+
+function switchRTab(id, el){
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.rpanel-body').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('rp-'+id).classList.add('active');
+}
+
+function toggleSec(head){
+  const body = head.nextElementSibling;
+  const arrow = head.querySelector(':last-child');
+  if(body){ body.classList.toggle('collapsed'); if(arrow) arrow.textContent = body.classList.contains('collapsed') ? '▸' : '▾'; }
+}
+
+function copyReport(){
+  const el = document.getElementById('reportBody');
+  if(el) navigator.clipboard.writeText(el.innerText).then(()=>toast('✅ Đã sao chép', 'ok'));
+}
+
+function toast(msg, type='info'){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (type==='ok'?'ok':type==='err'?'err':'');
+  setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+function fmt(n){
+  if(n==null||n===undefined) return '--';
+  const v = parseFloat(n);
+  if(isNaN(v)) return String(n);
+  if(v>=1e9) return (v/1e9).toFixed(2)+'B';
+  if(v>=1e6) return (v/1e6).toFixed(2)+'M';
+  if(v>=1000) return v.toLocaleString('vi-VN');
+  return v%1===0 ? v.toString() : v.toFixed(v<10?4:2);
+}
+const fmtN = fmt;
+
+function rsiCls(v){ const n=parseFloat(v); return n>70?'dn':n<30?'up':'neu'; }
+function macdCls(m, s){ return parseFloat(m||0)>parseFloat(s||0)?'up':'dn'; }
+
+function evalPE(v){ const n=parseFloat(v); if(isNaN(n)) return ''; return n<10?'✅ Thấp':n>25?'⚠ Cao':'✔ Hợp lý'; }
+function evalPB(v){ const n=parseFloat(v); if(isNaN(n)) return ''; return n<1.5?'✅ Thấp BV':n>3?'⚠ Cao':'✔ Hợp lý'; }
+function evalROE(v){ const n=parseFloat(v); if(isNaN(n)) return ''; return n>20?'⭐ Xuất sắc':n>15?'✅ Tốt':n>10?'✔ Khá':'⚠ TB'; }
+
+function mdToHtml(t){
+  if(!t) return '';
+  t = t.replace(/<think[\\s\\S]*?<\\/think>/gi,'');
+  t = t.replace(/^######\\s+(.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^#####\\s+(.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^####\\s+(.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^###\\s+(.+)$/gm,'<h3>$1</h3>');
+  t = t.replace(/^##\\s+(.+)$/gm,'<h2>$1</h2>');
+  t = t.replace(/^#\\s+(.+)$/gm,'<h1>$1</h1>');
+  t = t.replace(/^---+$/gm,'<hr>');
+  t = t.replace(/\\*\\*\\*(.+?)\\*\\*\\*/g,'<strong><em>$1</em></strong>');
+  t = t.replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>');
+  t = t.replace(/\\*(.+?)\\*/g,'<em>$1</em>');
+  t = t.replace(/`([^`]+)`/g,'<code>$1</code>');
+  t = t.replace(/^>\\s+(.+)$/gm,'<blockquote>$1</blockquote>');
+  t = t.replace(/^[-*•]\\s+(.+)$/gm,'<li>$1</li>');
+  t = t.replace(/^\\d+\\.\\s+(.+)$/gm,'<li>$1</li>');
+  t = t.replace(/(<li>.*<\\/li>\\n?)+/g, m => '<ul>'+m+'</ul>');
+  t = t.replace(/^\\|(.+)\\|$/gm, m => {
+    if(m.includes('---')) return '';
+    const cells = m.slice(1,-1).split('|').map(c=>c.trim());
+    return '<tr>'+cells.map(c=>`<td>${c}</td>`).join('')+'</tr>';
+  });
+  t = t.replace(/(<tr>.*<\\/tr>\\n?)+/g, m => '<table>'+m+'</table>');
+  const lines = t.split('\\n');
+  return lines.map(l => {
+    const trim = l.trim();
+    if(!trim) return '';
+    if(trim.match(/^<(h[1-6]|ul|ol|li|hr|blockquote|table|tr|td|th|p|div)/i)) return trim;
+    return `<p>${trim}</p>`;
+  }).join('\\n');
+}
+
+document.getElementById('symInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter') startAnalysis();
 });
 
-// ── Period buttons ─────────────────────────────────────
-document.querySelectorAll(".pbtn").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    document.querySelectorAll(".pbtn").forEach(b=>b.classList.remove("on"));
-    btn.classList.add("on");
-    S.period = btn.dataset.per;
-    if(S.data) renderCharts(S.data);
-  });
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') { setDrawTool('none', null); }
 });
 
-// ── Enter key on input ─────────────────────────────────
-document.getElementById("symInput").addEventListener("keydown", e=>{
-  if(e.key==="Enter") analyze();
-});
-
-// ── Analyze button ─────────────────────────────────────
-document.getElementById("analyzeBtn").addEventListener("click", analyze);
-
-// ═══════════════════════════════════════════════════════
-// CLOCK
-// ═══════════════════════════════════════════════════════
-function updateClock() {
-  const now = new Date();
-  const s = now.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
-  document.getElementById("clock").textContent = s;
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-// ═══════════════════════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════════════════════
-window.addEventListener("DOMContentLoaded", ()=>{
+document.addEventListener('DOMContentLoaded', () => {
   initCharts();
-  loadMarket();
-  // Refresh market every 3 min
-  setInterval(loadMarket, 180000);
-});
-
-window.addEventListener("resize", ()=>{
-  resizeCharts();
-  setTimeout(resizeCharts, 200);
 });
 </script>
 </body>
