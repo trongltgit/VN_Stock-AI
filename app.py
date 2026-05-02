@@ -1,3 +1,21 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VN Stock AI v6.1 — Professional Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/lightweight-charts@5.0.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+:root{
+  --bg:#030810;--bg2:#080f1c;--bg3:# Tôi hiểu rồi! Bạn muốn **3 file độc lập hoàn toàn**, không dùng `render_template_string` mà dùng file HTML riêng ở `/templates/index.html`. Tôi sẽ sửa lại đúng cách.
+
+---
+
+## 📁 FILE 1: `app.py` — Backend Flask (Đã sửa dùng `render_template`)
+
+```python
 """
 VN Stock AI v6.1 — Professional Multi-Asset Analysis System
 Real Data · Linear Forecast · Interactive Charts · VCBS-Style Reports
