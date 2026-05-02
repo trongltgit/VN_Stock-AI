@@ -71,8 +71,20 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .ticker-item{display:flex;align-items:center;gap:5px;padding:0 10px;font-family:'DM Mono',monospace;font-size:.64rem;white-space:nowrap;border-right:1px solid var(--border);cursor:pointer;transition:background .15s}
 .ticker-item:hover{background:var(--bg3)}
 .ti-sym{color:var(--accent);font-weight:600}
-.ti-val{color:var(--text)}
+.ti-val{color:var(--text);transition:color .4s}
+.ti-chg{transition:color .4s}
 .ti-chg.up{color:var(--green)}.ti-chg.dn{color:var(--red)}
+@keyframes flashUp{0%{background:rgba(0,217,126,.25)}100%{background:transparent}}
+@keyframes flashDn{0%{background:rgba(240,64,96,.25)}100%{background:transparent}}
+.flash-up{animation:flashUp .7s ease-out}
+.flash-dn{animation:flashDn .7s ease-out}
+.live-badge{
+  display:flex;align-items:center;gap:3px;padding:2px 7px;
+  background:rgba(0,217,126,.1);border:1px solid rgba(0,217,126,.3);
+  border-radius:4px;font-family:'DM Mono',monospace;font-size:.55rem;
+  color:var(--green);letter-spacing:.06em;flex-shrink:0
+}
+.live-dot{width:4px;height:4px;border-radius:50%;background:var(--green);animation:pulse 1.2s ease-in-out infinite}
 
 .topbar-right{display:flex;align-items:center;gap:12px;padding:0 14px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--text3)}
 .status-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite}
@@ -333,26 +345,27 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   </div>
 
   <div class="topbar-mid" id="tickerBar">
-    <div class="ticker-item" onclick="quickLoad('VN-INDEX')">
-      <span class="ti-sym">VN-INDEX</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <div class="ticker-item" onclick="quickLoad('VN-INDEX')" data-sym="VN-INDEX">
+      <span class="ti-sym">VN-INDEX</span><span class="ti-val" id="tval-VN-INDEX">--</span><span class="ti-chg" id="tchg-VN-INDEX">--</span>
     </div>
-    <div class="ticker-item" onclick="quickLoad('VCB')">
-      <span class="ti-sym">VCB</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    <div class="ticker-item" onclick="quickLoad('VCB')" data-sym="VCB">
+      <span class="ti-sym">VCB</span><span class="ti-val" id="tval-VCB">--</span><span class="ti-chg" id="tchg-VCB">--</span>
     </div>
-    <div class="ticker-item" onclick="quickLoad('HPG')">
-      <span class="ti-sym">HPG</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    <div class="ticker-item" onclick="quickLoad('HPG')" data-sym="HPG">
+      <span class="ti-sym">HPG</span><span class="ti-val" id="tval-HPG">--</span><span class="ti-chg" id="tchg-HPG">--</span>
     </div>
-    <div class="ticker-item" onclick="quickLoad('FPT')">
-      <span class="ti-sym">FPT</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    <div class="ticker-item" onclick="quickLoad('FPT')" data-sym="FPT">
+      <span class="ti-sym">FPT</span><span class="ti-val" id="tval-FPT">--</span><span class="ti-chg" id="tchg-FPT">--</span>
     </div>
-    <div class="ticker-item" onclick="quickLoad('VHM')">
-      <span class="ti-sym">VHM</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    <div class="ticker-item" onclick="quickLoad('VHM')" data-sym="VHM">
+      <span class="ti-sym">VHM</span><span class="ti-val" id="tval-VHM">--</span><span class="ti-chg" id="tchg-VHM">--</span>
     </div>
-    <div class="ticker-item" onclick="quickLoad('TCB')">
-      <span class="ti-sym">TCB</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    <div class="ticker-item" onclick="quickLoad('TCB')" data-sym="TCB">
+      <span class="ti-sym">TCB</span><span class="ti-val" id="tval-TCB">--</span><span class="ti-chg" id="tchg-TCB">--</span>
     </div>
-    <div class="ticker-item" onclick="quickLoad('MBB')">
-      <span class="ti-sym">MBB</span><span class="ti-val">--</span><span class="ti-chg">--</span>
+    <div class="ticker-item" onclick="quickLoad('MBB')" data-sym="MBB">
+      <span class="ti-sym">MBB</span><span class="ti-val" id="tval-MBB">--</span><span class="ti-chg" id="tchg-MBB">--</span>
     </div>
   </div>
 
@@ -637,6 +650,77 @@ function tick(){
   if(el) el.textContent = new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
 setInterval(tick,1000); tick();
+
+// ══════════════════════════════════════════════════════
+// LIVE TICKER BAR — cập nhật giá liên tục mỗi 30 giây
+// ══════════════════════════════════════════════════════
+const LIVE_SYMS = ['VN-INDEX','VCB','HPG','FPT','VHM','TCB','MBB'];
+const _prevPrices = {};
+
+function fmtPrice(p, sym){
+  if(p == null) return '--';
+  // VN-INDEX và chỉ số: hiển thị số thực với 2 chữ số thập phân
+  if(sym === 'VN-INDEX' || sym === 'HNX' || sym === 'UPCOM') return p.toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  // Cổ phiếu VN: đơn vị nghìn đồng
+  if(p > 1000) return (p/1000).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1});
+  return p.toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+async function updateLiveTickers(){
+  try{
+    const syms = LIVE_SYMS.join(',');
+    const res  = await fetch(`/api/quotes?syms=${syms}`,{signal: AbortSignal.timeout(8000)});
+    if(!res.ok) return;
+    const data = await res.json();
+    const quotes = data.quotes || {};
+
+    for(const sym of LIVE_SYMS){
+      const q = quotes[sym];
+      if(!q || q.price == null) continue;
+
+      const valEl = document.getElementById(`tval-${sym}`);
+      const chgEl = document.getElementById(`tchg-${sym}`);
+      const item  = valEl && valEl.closest('.ticker-item');
+      if(!valEl || !chgEl) continue;
+
+      const prev  = _prevPrices[sym];
+      const price = q.price;
+      const pct   = q.change_pct;
+      const sign  = pct >= 0 ? '+' : '';
+      const isUp  = pct >= 0;
+
+      valEl.textContent = fmtPrice(price, sym);
+      chgEl.textContent = `${sign}${pct.toFixed(2)}%`;
+      chgEl.className   = 'ti-chg ' + (isUp ? 'up' : 'dn');
+
+      // Flash animation khi giá thay đổi
+      if(prev != null && price !== prev && item){
+        const cls = isUp ? 'flash-up' : 'flash-dn';
+        item.classList.remove('flash-up','flash-dn');
+        void item.offsetWidth; // reflow để reset animation
+        item.classList.add(cls);
+        setTimeout(()=>item.classList.remove(cls), 800);
+      }
+      _prevPrices[sym] = price;
+    }
+
+    // Cập nhật màu chữ giá theo chiều
+    LIVE_SYMS.forEach(sym=>{
+      const valEl = document.getElementById(`tval-${sym}`);
+      const chgEl = document.getElementById(`tchg-${sym}`);
+      if(!valEl||!chgEl) return;
+      const pct = quotes[sym]?.change_pct ?? 0;
+      valEl.style.color = pct > 0 ? 'var(--green)' : pct < 0 ? 'var(--red)' : 'var(--text)';
+    });
+
+  }catch(e){
+    console.warn('Ticker update error:', e.message);
+  }
+}
+
+// Gọi ngay khi load + lặp mỗi 30 giây
+updateLiveTickers();
+setInterval(updateLiveTickers, 30000);
 
 async function checkHealth(){
   try{
