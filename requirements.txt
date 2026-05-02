@@ -4,9 +4,13 @@ gunicorn==22.0.0
 requests==2.32.3
 pandas==2.2.2
 numpy==1.26.4
-matplotlib==3.9.0
 python-dotenv==1.0.1
+scikit-learn==1.5.0
+scipy==1.13.1
+matplotlib==3.9.0
 duckduckgo-search==6.2.13
 groq>=0.15.0
-scipy==1.13.1
-scikit-learn==1.5.0
+
+# TensorFlow (dùng bản nhẹ để tránh crash)
+tensorflow-cpu==2.15.0
+# Hoặc nếu vẫn lỗi thì comment dòng trên và dùng fallback
