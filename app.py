@@ -33,8 +33,13 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.metrics import r2_score
 
 load_dotenv()
+
 app = Flask(__name__)
-CORS(app)
+
+# === SỬA CORS Ở ĐÂY ===
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+# ========================
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
