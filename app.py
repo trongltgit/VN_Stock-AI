@@ -1503,7 +1503,13 @@ class Orchestrator:
                 return self.analyze_stock(sym)
             except Exception:
                 pass
-            return self._error_response(sym, "fund", f"Không lấy được dữ liệu NAV cho quỹ {sym}. Nếu đây là ETF, hãy chọn loại 'stock'.")
+            return self._error_response(sym, "fund", 
+                f"Không lấy được dữ liệu cho {sym}.\n\n"
+                f"**Nguyên nhân có thể:**\n"
+                f"- Nếu là quỹ mở (VCBF-BCF, VFMVSF, SSISCA...): FMarket API bị chặn từ server nước ngoài\n"
+                f"- Nếu là ETF (E1VFVN30...): hãy chọn loại **Cổ phiếu** thay vì Quỹ\n"
+                f"- Mã không tồn tại hoặc chưa được hỗ trợ"
+            )
         
         tech, charts = self.ta.analyze(df)
         fc = self.forecaster.predict(df)
