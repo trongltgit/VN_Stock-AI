@@ -1,7 +1,7 @@
 """
 VN Stock AI v6.1 — Professional Multi-Asset Analysis System
 Real Data · Linear Forecast · Interactive Charts · VCBS-Style Reports
-Data Sources: TCBS (primary) → VCI (fallback) → FMarket (funds) → MSN (forex)
+Data Sources: TCBS (primary) → VCI (fallback) → VNDirect (fallback2) → FMarket (funds) → MSN (forex)
 """
 import os, json, logging, traceback, warnings, re, math
 from datetime import datetime, timedelta, date
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # ══════════════════════════════════════════════════════════════════════
 
 class Config:
-    STOCK_SOURCES = ['TCBS', 'VCI']
+    STOCK_SOURCES = ['TCBS', 'VCI', 'VNDIRECT']
     FUND_SOURCE = 'FMARKET'
     FOREX_SOURCE = 'MSN'
     
@@ -93,6 +93,12 @@ class DataProvider:
 class TCBSProvider(DataProvider):
     """TCBS API - Primary source for Vietnam stocks (2025)"""
     BASE_URL = "https://apipubaws.tcbs.com.vn"
+    HEADERS = {
+        **DataProvider.HEADERS,
+        "Referer": "https://tcinvest.tcbs.com.vn/",
+        "Origin": "https://tcinvest.tcbs.com.vn",
+        "DNT": "1",
+    }
     
     @classmethod
     def get_historical(cls, symbol: str, days: int = 500, resolution: str = "D") -> Optional[pd.DataFrame]:
@@ -214,6 +220,11 @@ class TCBSProvider(DataProvider):
 
 class VCIProvider(DataProvider):
     BASE_URL = "https://api.vietcap.com.vn"
+    HEADERS = {
+        **DataProvider.HEADERS,
+        "Referer": "https://trading.vietcap.com.vn/",
+        "Origin": "https://trading.vietcap.com.vn",
+    }
     
     @classmethod
     def get_historical(cls, symbol: str, days: int = 500, interval: str = "1D") -> Optional[pd.DataFrame]:
@@ -275,6 +286,79 @@ class VCIProvider(DataProvider):
         except Exception as e:
             logger.warning(f"VCI fundamental error: {e}")
             return {}
+
+class VNDirectProvider(DataProvider):
+    """VNDirect public API - third fallback for Vietnam stocks"""
+    BASE_URL = "https://finfo-api.vndirect.com.vn"
+    HEADERS = {
+        **DataProvider.HEADERS,
+        "Referer": "https://www.vndirect.com.vn/",
+        "Origin": "https://www.vndirect.com.vn",
+    }
+
+    @classmethod
+    def get_historical(cls, symbol: str, days: int = 500) -> Optional[pd.DataFrame]:
+        try:
+            symbol = symbol.upper().strip()
+            end = datetime.now().strftime("%Y-%m-%d")
+            start = (datetime.now() - timedelta(days=days * 2)).strftime("%Y-%m-%d")
+            url = f"{cls.BASE_URL}/v4/stock-prices"
+            params = {
+                "code": symbol,
+                "sort": "date",
+                "size": min(days * 2, 1000),
+                "page": 1,
+                "q": f"code:{symbol}~date:gte:{start}~date:lte:{end}",
+            }
+            data = cls.fetch(url, params=params, timeout=Config.TIMEOUT_MEDIUM)
+            if not data:
+                return None
+            rows = data.get("data", [])
+            if not rows:
+                return None
+            df = pd.DataFrame(rows)
+            col_map = {
+                "date": "time", "adOpen": "Open", "adHigh": "High",
+                "adLow": "Low", "adClose": "Close", "nmVolume": "Volume",
+                "open": "Open", "high": "High", "low": "Low",
+                "close": "Close", "volume": "Volume",
+            }
+            df = df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
+            if "time" in df.columns:
+                df["time"] = pd.to_datetime(df["time"])
+            for col in ["Open", "High", "Low", "Close", "Volume"]:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
+            df = df.dropna(subset=["Close"]).sort_values("time").reset_index(drop=True)
+            if len(df) >= 30:
+                logger.info(f"VNDirect: Fetched {len(df)} bars for {symbol}")
+                return df
+            return None
+        except Exception as e:
+            logger.warning(f"VNDirect historical error for {symbol}: {e}")
+            return None
+
+    @classmethod
+    def get_fundamental(cls, symbol: str) -> dict:
+        try:
+            symbol = symbol.upper().strip()
+            url = f"{cls.BASE_URL}/v4/stocks"
+            params = {"q": f"code:{symbol}", "fields": "code,companyName,industryName,exchange,marketCap,pe,pb,eps,beta"}
+            data = cls.fetch(url, params=params, timeout=Config.TIMEOUT_SHORT)
+            if not data:
+                return {}
+            rows = data.get("data", [])
+            d = rows[0] if rows else {}
+            return {
+                "pe": d.get("pe"), "pb": d.get("pb"), "eps": d.get("eps"),
+                "beta": d.get("beta"), "market_cap": d.get("marketCap"),
+                "industry": d.get("industryName"), "exchange": d.get("exchange"),
+                "company_name": d.get("companyName"),
+            }
+        except Exception as e:
+            logger.warning(f"VNDirect fundamental error: {e}")
+            return {}
+
 
 class FMarketProvider(DataProvider):
     BASE_URL = "https://api.fmarket.vn"
@@ -456,6 +540,7 @@ class StockDataManager:
     def __init__(self):
         self.tcbs = TCBSProvider()
         self.vci = VCIProvider()
+        self.vndirect = VNDirectProvider()
         self.fmarket = FMarketProvider()
         self.msn = MSNProvider()
     
@@ -471,6 +556,11 @@ class StockDataManager:
         if df is not None and len(df) >= 30:
             fund = self.vci.get_fundamental(symbol)
             return df, "VCI", fund
+        logger.info(f"Falling back to VNDirect for {symbol}")
+        df = self.vndirect.get_historical(symbol, days)
+        if df is not None and len(df) >= 30:
+            fund = self.vndirect.get_fundamental(symbol)
+            return df, "VNDirect", fund
         logger.error(f"No data available for {symbol} from any source")
         return None, "NONE", {}
     
@@ -1336,7 +1426,7 @@ def health():
         "timestamp": datetime.now().isoformat(),
         "ai": orc.ai.client is not None,
         "forecast": "Linear Regression + Technical Features",
-        "data_sources": ["TCBS", "VCI", "FMarket", "MSN"],
+        "data_sources": ["TCBS", "VCI", "VNDirect", "FMarket", "MSN"],
     })
 
 if __name__ == "__main__":
