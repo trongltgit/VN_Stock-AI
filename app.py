@@ -647,7 +647,7 @@ class TechnicalAnalysis:
         
         rsi = cls.rsi(c, 14)
         macd_line, macd_signal, macd_hist = cls.macd(c)
-        stoch_k, stoch_d = cls.stoch(h, l, c)
+        stoch_k, stoch_d = cls.stochastic(h, l, c)
         williams = cls.williams_r(h, l, c)
         cci = cls.cci(h, l, c)
         mfi = cls.mfi(h, l, c, v)
@@ -1219,7 +1219,13 @@ class Orchestrator:
         sym = symbol.upper()
         df, info, search, holdings, allocation = self.data_mgr.get_fund_data(sym)
         if df is None:
-            return self._error_response(sym, "fund", f"Không lấy được dữ liệu NAV cho quỹ {sym}")
+            # Fallback: ETFs like E1VFVN30 trade on exchanges like stocks — try stock path
+            logger.info(f"Fund not on FMarket, trying stock fallback for {sym}")
+            try:
+                return self.analyze_stock(sym)
+            except Exception:
+                pass
+            return self._error_response(sym, "fund", f"Không lấy được dữ liệu NAV cho quỹ {sym}. Nếu đây là ETF, hãy chọn loại 'stock'.")
         
         tech, charts = self.ta.analyze(df)
         fc = self.forecaster.predict(df)
