@@ -132,9 +132,10 @@ class TCBSProvider(DataProvider):
             end_time = int(datetime.now().timestamp())
             start_time = int((datetime.now() - timedelta(days=days * 2)).timestamp())
             
+            INDEX_SYMBOLS = {"VNINDEX", "VN30", "HNX30", "HNX", "UPCOM", "VN-INDEX"}
             params = {
                 "ticker": symbol,
-                "type": "stock",
+                "type": "index" if symbol in INDEX_SYMBOLS else "stock",
                 "resolution": resolution,
                 "from": start_time,
                 "to": end_time,
@@ -390,8 +391,8 @@ class YFinanceProvider:
                    "MBB", "MSN", "BID", "CTG", "TCB", "VPB", "HDB", "OCB", "LPB", "KLB"}
 
     # Map chỉ số & mã đặc biệt → Yahoo Finance ticker
+    # Lưu ý: ^VNINDEX đã bị Yahoo Finance ngừng hỗ trợ → dùng TCBS thay thế
     INDEX_MAP = {
-        "VNINDEX": "^VNINDEX", "VN-INDEX": "^VNINDEX", "VN_INDEX": "^VNINDEX",
         "VN30": "^VN30", "VN-30": "^VN30",
         "HNX": "^HNX30", "HNX30": "^HNX30", "HNX-30": "^HNX30",
         "UPCOM": "^UPCOM",
@@ -403,6 +404,9 @@ class YFinanceProvider:
     @classmethod
     def _tickers(cls, symbol: str) -> list:
         symbol = symbol.upper().strip()
+        # VNINDEX không có trên Yahoo Finance → dùng TCBS thay thế
+        if symbol in ("VNINDEX", "VN-INDEX", "VN_INDEX"):
+            return []
         # Ưu tiên map đặc biệt (chỉ số, hàng hóa)
         if symbol in cls.INDEX_MAP:
             return [cls.INDEX_MAP[symbol]]
@@ -1006,6 +1010,13 @@ class StockDataManager:
                 _cache_set(f"fund:{symbol}", result)
                 return result
             logger.info(f"VCBF direct failed for {symbol}")
+            # Thử nguồn VietFund (accessible toàn cầu)
+            df_vf = self._try_vietfund(symbol, days)
+            if df_vf is not None and len(df_vf) >= 10:
+                info   = self.vcbf_fund.get_fund_info(symbol)
+                result = (df_vf, info, {"shortName": symbol}, [], [])
+                _cache_set(f"fund:{symbol}", result)
+                return result
 
         # ── Nguồn 3: SSIAM / Dragon Capital ──────────────────────────────
         if symbol in SSIAMFundProvider.FUND_MAP:
@@ -1030,6 +1041,47 @@ class StockDataManager:
         logger.error(f"No fund data from any source for {symbol}")
         return None, {}, {}, [], []
     
+    def _try_vietfund(self, fund_code: str, days: int = 365) -> Optional[pd.DataFrame]:
+        """VietFund.vn — nguồn dự phòng cho quỹ mở không truy cập được từ server ngoài VN"""
+        try:
+            # Thử endpoint vietfund aggregator
+            urls = [
+                f"https://api.vietfund.vn/api/fund/{fund_code}/nav-history",
+                f"https://misa.vn/api/fund/{fund_code}/nav",
+                # Thử FMarket với tên đầy đủ
+                f"https://api.fmarket.vn/res/product/filter",
+            ]
+            for url in urls[:2]:
+                try:
+                    r = requests.get(url, headers=DataProvider.HEADERS, timeout=5)
+                    if r.status_code == 200:
+                        data = r.json()
+                        items = data.get("data") or (data if isinstance(data, list) else [])
+                        if items and len(items) >= 5:
+                            df = pd.DataFrame(items)
+                            for dc in ["date", "navDate", "Date", "Nav_Date"]:
+                                if dc in df.columns:
+                                    df = df.rename(columns={dc: "time"}); break
+                            for nc in ["nav", "navValue", "Nav", "value"]:
+                                if nc in df.columns:
+                                    df = df.rename(columns={nc: "Close"}); break
+                            if "time" in df.columns and "Close" in df.columns:
+                                df["time"] = pd.to_datetime(df["time"], errors="coerce")
+                                df["Close"] = pd.to_numeric(df["Close"], errors="coerce")
+                                df = df.dropna(subset=["time", "Close"]).sort_values("time").reset_index(drop=True)
+                                df["Open"] = df["Close"].shift(1).fillna(df["Close"])
+                                df["High"] = df["Close"] * 1.002
+                                df["Low"]  = df["Close"] * 0.998
+                                df["Volume"] = 0
+                                if len(df) >= 10:
+                                    logger.info(f"VietFund: Fetched {len(df)} rows for {fund_code}")
+                                    return df
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"VietFund error for {fund_code}: {e}")
+        return None
+
     def get_forex_data(self, pair: str, days: int = 180) -> Tuple[Optional[pd.DataFrame], str]:
         pair = pair.upper().strip()
         df = self.msn.get_forex_history(pair, days)
@@ -1888,6 +1940,32 @@ def _fetch_single_quote(sym: str) -> dict:
 
     # Map VN-INDEX → VNINDEX cho TCBS
     tcbs_sym = "VNINDEX" if sym in ("VN-INDEX", "VNINDEX") else sym
+
+    # ── Đặc biệt: VNINDEX / VN-INDEX qua TCBS bars (type=index) ──────
+    if sym in ("VN-INDEX", "VNINDEX"):
+        try:
+            url = "https://apipubaws.tcbs.com.vn/stock-insight/v1/stock/bars-long-term"
+            end_t = int(datetime.now().timestamp())
+            start_t = int((datetime.now() - timedelta(days=7)).timestamp())
+            r = requests.get(url, params={"ticker": "VNINDEX", "type": "index",
+                                          "resolution": "D", "from": start_t, "to": end_t},
+                             headers=TCBSProvider.HEADERS, timeout=5)
+            if r.status_code == 200:
+                bars = r.json().get("data", [])
+                if bars and len(bars) >= 2:
+                    last = bars[-1]
+                    prev = bars[-2]
+                    cp = float(last.get("c") or last.get("close") or 0)
+                    pp = float(prev.get("c") or prev.get("close") or cp)
+                    if cp:
+                        chg = cp - pp
+                        chg_pct = (chg / pp * 100) if pp else 0
+                        result = {"sym": "VN-INDEX", "price": cp,
+                                  "change": round(chg, 2), "change_pct": round(chg_pct, 2), "src": "TCBS"}
+                        _qcache_set(sym, result)
+                        return result
+        except Exception:
+            pass
 
     # ── TCBS quote ────────────────────────────────────────────────────
     try:
