@@ -2017,6 +2017,10 @@ def _fetch_single_quote(sym: str) -> dict:
         pass
 
     # ── YFinance last close (chậm hơn, dùng làm last resort) ──────────
+    # Bỏ qua hoàn toàn cho chỉ số VN — Yahoo Finance không hỗ trợ từ server ngoài VN
+    _VN_INDICES = {"VN-INDEX", "VNINDEX", "VN_INDEX", "VN30", "HNX30", "HNX", "UPCOM"}
+    if sym in _VN_INDICES:
+        return {"sym": display_sym, "price": None, "change": 0, "change_pct": 0, "src": "N/A"}
     try:
         yf_sym = YFinanceProvider.INDEX_MAP.get(sym, f"{sym}.VN")
         ticker = yf.Ticker(yf_sym)
